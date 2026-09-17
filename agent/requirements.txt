@@ -1,0 +1,9 @@
+# AgentCore Direct Code Deploy 会把这些依赖 vendored 进 zip
+# （见 cdk/lib/agent-stack.ts 的 bundling），所以版本必须锁得住。
+strands-agents>=1.0.0,<2
+bedrock-agentcore>=0.1.0
+boto3>=1.35.0
+
+# ADOT：埋点靠 entryPoint 前缀 `opentelemetry-instrument` 加载，
+# 但 distro 本身必须在包里。omni-production-observability skill 要求 >=0.18.0。
+aws-opentelemetry-distro>=0.18.0

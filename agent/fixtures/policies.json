@@ -1,0 +1,68 @@
+{
+  "_doc": "退换货政策。这是本 Demo 唯一的政策真相来源 (single source of truth)。agent 必须通过 get_refund_policy 读到它才能正确回答；v1 prompt 故意不要求这么做，于是会凭常识编政策 —— 这正是自定义 evaluator PolicyGrounding 要抓的病根。",
+  "_version": "policy-2026-09",
+
+  "coupon_allocation_rule": {
+    "id": "COUPON_PRORATE_BY_LIST_PRICE",
+    "statement": "订单级优惠券按各商品「原价小计」占订单原价总额的比例分摊到每件商品。退货只退该商品分摊后的实付金额，不退整张券面值。",
+    "rounding": "分摊金额四舍五入到分 (2 位小数); 因舍入产生的差额补到订单中原价小计最大的那件商品上, 保证分摊总额恰好等于券面值。"
+  },
+
+  "shipping_rule": {
+    "id": "SHIPPING_REFUND_RULE",
+    "statement": "原始运费仅在「整单退货」且政策规定运费由商家承担时退还; 部分退货一律不退原始运费。退回商品的寄回运费由 return_shipping_paid_by 指定的一方承担。"
+  },
+
+  "damaged_rule": {
+    "id": "DAMAGED_OVERRIDE",
+    "statement": "商品到货即破损 (damaged=true) 时, 无论是否超出退货窗口, 均可全额退款: 免折旧费, 寄回运费与原始运费均由商家承担。"
+  },
+
+  "categories": {
+    "electronics": {
+      "display_name": "电子产品",
+      "return_window_days": 14,
+      "restocking_fee_pct": 10,
+      "return_shipping_paid_by": "customer",
+      "exchange_after_window": true,
+      "exchange_window_days": 30,
+      "notes": "超出 14 天退货窗口但在 30 天内, 不可退款, 但可换同款新品。超出 30 天只能走厂商保修。"
+    },
+    "apparel": {
+      "display_name": "服饰",
+      "return_window_days": 30,
+      "restocking_fee_pct": 0,
+      "return_shipping_paid_by": "merchant",
+      "exchange_after_window": false,
+      "exchange_window_days": 0,
+      "notes": "30 天无理由退货, 不收折旧费, 寄回运费由商家承担。吊牌需完好。"
+    },
+    "books": {
+      "display_name": "图书",
+      "return_window_days": 30,
+      "restocking_fee_pct": 0,
+      "return_shipping_paid_by": "customer",
+      "exchange_after_window": false,
+      "exchange_window_days": 0,
+      "notes": "30 天内可退, 无折旧费, 寄回运费由买家承担。"
+    },
+    "home": {
+      "display_name": "家居",
+      "return_window_days": 21,
+      "restocking_fee_pct": 5,
+      "return_shipping_paid_by": "customer",
+      "exchange_after_window": true,
+      "exchange_window_days": 30,
+      "notes": "21 天内可退, 收 5% 折旧费。超出 21 天但在 30 天内可换新。"
+    },
+    "perishable": {
+      "display_name": "生鲜食品",
+      "return_window_days": 0,
+      "restocking_fee_pct": 0,
+      "return_shipping_paid_by": "n/a",
+      "exchange_after_window": false,
+      "exchange_window_days": 0,
+      "notes": "生鲜食品一经售出不支持无理由退货。仅在商品到货破损或变质时全额退款。"
+    }
+  }
+}

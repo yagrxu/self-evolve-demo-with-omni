@@ -1,0 +1,184 @@
+{
+  "_doc": "订单 fixture。所有日期都相对固定基准日 AS_OF_DATE=2026-09-17 计算, 使 oracle 永久稳定 (见 agent/tools.py 的 as_of() )。三段 ID 区间对应三份 dataset, 彼此不相交 —— ORD-102xx 是 Phase 6 的 held-out 集, 保证提升不是来自记住答案。",
+  "_as_of_date": "2026-09-17",
+  "_id_ranges": {
+    "ORD-100xx": "dev_local  (Phase 2, 本地基线, 15 条)",
+    "ORD-101xx": "prod_sim   (Phase 3, 云上流量模拟, 20 条)",
+    "ORD-102xx": "verify     (Phase 6, held-out 云上验证, 20 条)"
+  },
+
+  "orders": [
+    {"order_id":"ORD-10001","customer":"张伟","order_date":"2026-09-12","shipping_fee":12.00,"coupon":null,
+     "items":[{"sku":"KB-K87","name":"机械键盘 K87 青轴","category":"electronics","list_price":549.00,"qty":1,"damaged":false}]},
+
+    {"order_id":"ORD-10002","customer":"李娜","order_date":"2026-08-25","shipping_fee":15.00,"coupon":null,
+     "items":[{"sku":"HP-SPX2","name":"无线降噪耳机 SoundPeak X2","category":"electronics","list_price":899.00,"qty":1,"damaged":false}]},
+
+    {"order_id":"ORD-10003","customer":"王强","order_date":"2026-06-30","shipping_fee":0.00,"coupon":null,
+     "items":[{"sku":"NB-RP16","name":"游戏本 Raptor 16","category":"electronics","list_price":8999.00,"qty":1,"damaged":false}]},
+
+    {"order_id":"ORD-10004","customer":"陈静","order_date":"2026-09-05","shipping_fee":0.00,"coupon":null,
+     "items":[{"sku":"TS-CT01","name":"纯棉圆领T恤 白色 L","category":"apparel","list_price":129.00,"qty":2,"damaged":false}]},
+
+    {"order_id":"ORD-10005","customer":"刘洋","order_date":"2026-08-14","shipping_fee":0.00,"coupon":null,
+     "items":[{"sku":"SP-RS22","name":"速干运动短裤 黑色 M","category":"apparel","list_price":199.00,"qty":3,"damaged":false}]},
+
+    {"order_id":"ORD-10006","customer":"赵敏","order_date":"2026-09-01","shipping_fee":0.00,"coupon":null,
+     "items":[{"sku":"BK-PY03","name":"编程入门 第3版","category":"books","list_price":79.00,"qty":1,"damaged":false}]},
+
+    {"order_id":"ORD-10007","customer":"孙磊","order_date":"2026-09-14","shipping_fee":0.00,"coupon":null,
+     "items":[{"sku":"AF-5L","name":"空气炸锅 5L 无油版","category":"home","list_price":699.00,"qty":1,"damaged":false}]},
+
+    {"order_id":"ORD-10008","customer":"周芳","order_date":"2026-08-20","shipping_fee":20.00,"coupon":null,
+     "items":[{"sku":"FL-NR01","name":"北欧风落地灯","category":"home","list_price":459.00,"qty":1,"damaged":false}]},
+
+    {"order_id":"ORD-10009","customer":"吴涛","order_date":"2026-09-15","shipping_fee":8.00,"coupon":null,
+     "items":[{"sku":"MK-OG12","name":"有机全脂牛奶 12 盒装","category":"perishable","list_price":89.00,"qty":1,"damaged":false}]},
+
+    {"order_id":"ORD-10010","customer":"郑丽","order_date":"2026-09-13","shipping_fee":8.00,"coupon":null,
+     "items":[{"sku":"BF-AU06","name":"进口蓝莓 6 盒装","category":"perishable","list_price":168.00,"qty":1,"damaged":true}]},
+
+    {"order_id":"ORD-10011","customer":"马超","order_date":"2026-09-10","shipping_fee":0.00,"coupon":{"code":"SAVE200","amount":200.00},
+     "items":[{"sku":"SW-PL3","name":"智能手表 Pulse 3","category":"electronics","list_price":1299.00,"qty":1,"damaged":false}]},
+
+    {"order_id":"ORD-10012","customer":"何雪","order_date":"2026-09-13","shipping_fee":15.00,"coupon":{"code":"SAVE80","amount":80.00},
+     "items":[{"sku":"SK-BT40","name":"蓝牙音箱 BeatBox 40","category":"electronics","list_price":399.00,"qty":1,"damaged":false},
+              {"sku":"PC-TPU","name":"手机保护壳 透明款","category":"electronics","list_price":59.00,"qty":2,"damaged":false}]},
+
+    {"order_id":"ORD-10013","customer":"许峰","order_date":"2026-07-24","shipping_fee":25.00,"coupon":null,
+     "items":[{"sku":"CH-ERG9","name":"人体工学办公椅 Ergo9","category":"home","list_price":1580.00,"qty":1,"damaged":true}]},
+
+    {"order_id":"ORD-10014","customer":"林悦","order_date":"2026-09-04","shipping_fee":18.00,"coupon":null,
+     "items":[{"sku":"JK-WD02","name":"轻薄羽绒外套 藏青 M","category":"apparel","list_price":699.00,"qty":1,"damaged":false}]},
+
+    {"order_id":"ORD-10015","customer":"高翔","order_date":"2026-09-08","shipping_fee":12.00,"coupon":{"code":"SAVE150","amount":150.00},
+     "items":[{"sku":"MN-27Q","name":"27寸 2K 显示器 QHD","category":"electronics","list_price":1499.00,"qty":1,"damaged":false},
+              {"sku":"HD-ST1T","name":"移动固态硬盘 1TB","category":"electronics","list_price":499.00,"qty":1,"damaged":false}]},
+
+    {"order_id":"ORD-10101","customer":"曹宇","order_date":"2026-09-16","shipping_fee":10.00,"coupon":null,
+     "items":[{"sku":"MS-M5","name":"无线鼠标 M5 静音版","category":"electronics","list_price":159.00,"qty":1,"damaged":false}]},
+
+    {"order_id":"ORD-10102","customer":"邓琳","order_date":"2026-08-26","shipping_fee":0.00,"coupon":null,
+     "items":[{"sku":"EB-AIR3","name":"真无线耳机 AirBuds 3","category":"electronics","list_price":649.00,"qty":1,"damaged":false}]},
+
+    {"order_id":"ORD-10103","customer":"谢军","order_date":"2026-06-30","shipping_fee":0.00,"coupon":null,
+     "items":[{"sku":"TB-PD11","name":"平板电脑 Pad 11 Pro","category":"electronics","list_price":3299.00,"qty":1,"damaged":false}]},
+
+    {"order_id":"ORD-10104","customer":"韩雨","order_date":"2026-09-02","shipping_fee":0.00,"coupon":null,
+     "items":[{"sku":"HD-CT08","name":"连帽卫衣 灰色 XL","category":"apparel","list_price":259.00,"qty":1,"damaged":false}]},
+
+    {"order_id":"ORD-10105","customer":"唐波","order_date":"2026-08-08","shipping_fee":0.00,"coupon":null,
+     "items":[{"sku":"SN-RN90","name":"跑步鞋 RunLite 90","category":"apparel","list_price":459.00,"qty":1,"damaged":false}]},
+
+    {"order_id":"ORD-10106","customer":"冯洁","order_date":"2026-08-30","shipping_fee":0.00,"coupon":null,
+     "items":[{"sku":"BK-DS02","name":"数据结构与算法 第2版","category":"books","list_price":118.00,"qty":1,"damaged":false}]},
+
+    {"order_id":"ORD-10107","customer":"董强","order_date":"2026-09-10","shipping_fee":0.00,"coupon":null,
+     "items":[{"sku":"RC-3L","name":"智能电饭煲 3L","category":"home","list_price":399.00,"qty":1,"damaged":false}]},
+
+    {"order_id":"ORD-10108","customer":"程颖","order_date":"2026-08-23","shipping_fee":30.00,"coupon":null,
+     "items":[{"sku":"RG-160","name":"手工羊毛地毯 160x230","category":"home","list_price":2280.00,"qty":1,"damaged":false}]},
+
+    {"order_id":"ORD-10109","customer":"任杰","order_date":"2026-09-16","shipping_fee":8.00,"coupon":null,
+     "items":[{"sku":"SF-SL05","name":"冰鲜三文鱼 500g","category":"perishable","list_price":128.00,"qty":1,"damaged":false}]},
+
+    {"order_id":"ORD-10110","customer":"卢敏","order_date":"2026-09-14","shipping_fee":10.00,"coupon":null,
+     "items":[{"sku":"CK-BX12","name":"手工蛋糕礼盒 12 件","category":"perishable","list_price":238.00,"qty":1,"damaged":true}]},
+
+    {"order_id":"ORD-10111","customer":"姜浩","order_date":"2026-09-12","shipping_fee":0.00,"coupon":{"code":"SAVE300","amount":300.00},
+     "items":[{"sku":"CM-Z50","name":"微单相机 Z50 套机","category":"electronics","list_price":4999.00,"qty":1,"damaged":false}]},
+
+    {"order_id":"ORD-10112","customer":"崔莹","order_date":"2026-09-15","shipping_fee":12.00,"coupon":{"code":"SAVE120","amount":120.00},
+     "items":[{"sku":"KB-M61","name":"矮轴键盘 M61","category":"electronics","list_price":459.00,"qty":1,"damaged":false},
+              {"sku":"MP-XL","name":"加厚桌垫 XL","category":"electronics","list_price":89.00,"qty":2,"damaged":false}]},
+
+    {"order_id":"ORD-10113","customer":"钱斌","order_date":"2026-07-24","shipping_fee":40.00,"coupon":null,
+     "items":[{"sku":"SF-3S","name":"三人位布艺沙发","category":"home","list_price":4680.00,"qty":1,"damaged":true}]},
+
+    {"order_id":"ORD-10114","customer":"戴倩","order_date":"2026-09-04","shipping_fee":16.00,"coupon":null,
+     "items":[{"sku":"DR-SL07","name":"真丝连衣裙 米白 S","category":"apparel","list_price":899.00,"qty":1,"damaged":false}]},
+
+    {"order_id":"ORD-10115","customer":"叶明","order_date":"2026-09-08","shipping_fee":15.00,"coupon":{"code":"SAVE250","amount":250.00},
+     "items":[{"sku":"PJ-4K1","name":"家用投影仪 4K 版","category":"electronics","list_price":2999.00,"qty":1,"damaged":false},
+              {"sku":"SC-100","name":"抗光投影幕 100寸","category":"home","list_price":599.00,"qty":1,"damaged":false}]},
+
+    {"order_id":"ORD-10116","customer":"薛涛","order_date":"2026-09-05","shipping_fee":0.00,"coupon":null,
+     "items":[{"sku":"WD-A9","name":"电动牙刷 A9","category":"electronics","list_price":329.00,"qty":2,"damaged":false}]},
+
+    {"order_id":"ORD-10117","customer":"傅琳","order_date":"2026-08-17","shipping_fee":0.00,"coupon":null,
+     "items":[{"sku":"BK-ML01","name":"机器学习实战","category":"books","list_price":149.00,"qty":1,"damaged":false}]},
+
+    {"order_id":"ORD-10118","customer":"廖凯","order_date":"2026-08-28","shipping_fee":18.00,"coupon":null,
+     "items":[{"sku":"CF-EM3","name":"半自动咖啡机 EM3","category":"home","list_price":1899.00,"qty":1,"damaged":false}]},
+
+    {"order_id":"ORD-10119","customer":"石燕","order_date":"2026-09-13","shipping_fee":0.00,"coupon":{"code":"SAVE60","amount":60.00},
+     "items":[{"sku":"SK-CT03","name":"精梳棉袜 5 双装","category":"apparel","list_price":99.00,"qty":2,"damaged":false},
+              {"sku":"BT-LE01","name":"真皮腰带","category":"apparel","list_price":269.00,"qty":1,"damaged":false}]},
+
+    {"order_id":"ORD-10120","customer":"贾诚","order_date":"2026-09-11","shipping_fee":22.00,"coupon":null,
+     "items":[{"sku":"VC-R7","name":"扫地机器人 R7","category":"home","list_price":2599.00,"qty":1,"damaged":false}]},
+
+    {"order_id":"ORD-10201","customer":"江帆","order_date":"2026-09-15","shipping_fee":10.00,"coupon":null,
+     "items":[{"sku":"WC-HC5","name":"USB-C 快充头 65W","category":"electronics","list_price":129.00,"qty":1,"damaged":false}]},
+
+    {"order_id":"ORD-10202","customer":"齐悦","order_date":"2026-08-28","shipping_fee":0.00,"coupon":null,
+     "items":[{"sku":"HP-OE7","name":"开放式蓝牙耳机 OpenEar 7","category":"electronics","list_price":799.00,"qty":1,"damaged":false}]},
+
+    {"order_id":"ORD-10203","customer":"莫远","order_date":"2026-07-24","shipping_fee":0.00,"coupon":null,
+     "items":[{"sku":"PH-N14","name":"智能手机 Nova 14","category":"electronics","list_price":4599.00,"qty":1,"damaged":false}]},
+
+    {"order_id":"ORD-10204","customer":"柳青","order_date":"2026-09-01","shipping_fee":0.00,"coupon":null,
+     "items":[{"sku":"PL-DK04","name":"西装长裤 深灰 32","category":"apparel","list_price":359.00,"qty":1,"damaged":false}]},
+
+    {"order_id":"ORD-10205","customer":"聂鑫","order_date":"2026-08-14","shipping_fee":0.00,"coupon":null,
+     "items":[{"sku":"CP-WL08","name":"羊毛大衣 驼色 L","category":"apparel","list_price":1299.00,"qty":1,"damaged":false}]},
+
+    {"order_id":"ORD-10206","customer":"范婷","order_date":"2026-09-02","shipping_fee":0.00,"coupon":null,
+     "items":[{"sku":"BK-SY05","name":"系统设计面试指南","category":"books","list_price":168.00,"qty":1,"damaged":false}]},
+
+    {"order_id":"ORD-10207","customer":"雷刚","order_date":"2026-09-12","shipping_fee":0.00,"coupon":null,
+     "items":[{"sku":"HM-U2","name":"超声波加湿器 U2","category":"home","list_price":329.00,"qty":1,"damaged":false}]},
+
+    {"order_id":"ORD-10208","customer":"卫佳","order_date":"2026-08-20","shipping_fee":25.00,"coupon":null,
+     "items":[{"sku":"BD-Q18","name":"实木床架 1.8m","category":"home","list_price":3280.00,"qty":1,"damaged":false}]},
+
+    {"order_id":"ORD-10209","customer":"孟凡","order_date":"2026-09-16","shipping_fee":8.00,"coupon":null,
+     "items":[{"sku":"BF-GR03","name":"云南新鲜草莓 3 盒","category":"perishable","list_price":198.00,"qty":1,"damaged":false}]},
+
+    {"order_id":"ORD-10210","customer":"侯睿","order_date":"2026-09-13","shipping_fee":10.00,"coupon":null,
+     "items":[{"sku":"SD-MC06","name":"冷鲜牛排礼盒 6 片","category":"perishable","list_price":368.00,"qty":1,"damaged":true}]},
+
+    {"order_id":"ORD-10211","customer":"游倩","order_date":"2026-09-14","shipping_fee":0.00,"coupon":{"code":"SAVE400","amount":400.00},
+     "items":[{"sku":"NB-AU14","name":"轻薄本 AirLite 14","category":"electronics","list_price":5999.00,"qty":1,"damaged":false}]},
+
+    {"order_id":"ORD-10212","customer":"施雅","order_date":"2026-09-16","shipping_fee":12.00,"coupon":{"code":"SAVE90","amount":90.00},
+     "items":[{"sku":"MS-G9","name":"游戏鼠标 G9","category":"electronics","list_price":299.00,"qty":1,"damaged":false},
+              {"sku":"CB-HD2","name":"HDMI 2.1 线 2m","category":"electronics","list_price":69.00,"qty":2,"damaged":false}]},
+
+    {"order_id":"ORD-10213","customer":"章寒","order_date":"2026-07-24","shipping_fee":35.00,"coupon":null,
+     "items":[{"sku":"DT-OK15","name":"橡木书桌 1.5m","category":"home","list_price":2680.00,"qty":1,"damaged":true}]},
+
+    {"order_id":"ORD-10214","customer":"苗欣","order_date":"2026-09-05","shipping_fee":14.00,"coupon":null,
+     "items":[{"sku":"SH-LT02","name":"真皮短靴 黑色 37","category":"apparel","list_price":1099.00,"qty":1,"damaged":false}]},
+
+    {"order_id":"ORD-10215","customer":"路远","order_date":"2026-09-10","shipping_fee":15.00,"coupon":{"code":"SAVE350","amount":350.00},
+     "items":[{"sku":"TV-55Q","name":"55寸 QLED 电视","category":"electronics","list_price":3899.00,"qty":1,"damaged":false},
+              {"sku":"TS-BR01","name":"电视挂架 可旋转","category":"home","list_price":329.00,"qty":1,"damaged":false}]},
+
+    {"order_id":"ORD-10216","customer":"欧阳磊","order_date":"2026-09-04","shipping_fee":0.00,"coupon":null,
+     "items":[{"sku":"PB-20K","name":"移动电源 20000mAh","category":"electronics","list_price":249.00,"qty":2,"damaged":false}]},
+
+    {"order_id":"ORD-10217","customer":"华晨","order_date":"2026-08-17","shipping_fee":0.00,"coupon":null,
+     "items":[{"sku":"BK-CL07","name":"云原生架构实践","category":"books","list_price":139.00,"qty":1,"damaged":false}]},
+
+    {"order_id":"ORD-10218","customer":"关雪","order_date":"2026-08-26","shipping_fee":20.00,"coupon":null,
+     "items":[{"sku":"OV-ST32","name":"嵌入式蒸烤箱 32L","category":"home","list_price":3999.00,"qty":1,"damaged":false}]},
+
+    {"order_id":"ORD-10219","customer":"樊菲","order_date":"2026-09-15","shipping_fee":0.00,"coupon":{"code":"SAVE70","amount":70.00},
+     "items":[{"sku":"TT-CT09","name":"基础款T恤 3 件装","category":"apparel","list_price":159.00,"qty":2,"damaged":false},
+              {"sku":"CP-BB01","name":"棒球帽 米色","category":"apparel","list_price":129.00,"qty":1,"damaged":false}]},
+
+    {"order_id":"ORD-10220","customer":"殷朗","order_date":"2026-09-11","shipping_fee":18.00,"coupon":null,
+     "items":[{"sku":"AP-P5","name":"空气净化器 P5","category":"home","list_price":1999.00,"qty":1,"damaged":false}]}
+  ]
+}

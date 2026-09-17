@@ -1,0 +1,25 @@
+{
+  "mcpServers": {
+    "cw-omni-agents-extension": {
+      "command": "/Users/yagrxu/.nvm/versions/node/v24.14.0/bin/node",
+      "args": [
+        "/Users/yagrxu/.kiro/extensions/amazon-internal.omni-studios-1.0.5151/out/mcp-server/mcp-proxy.js",
+        "--workspace",
+        "/Users/yagrxu/me/collaborations/2026/tfc/self-evolve-demo-with-omni"
+      ],
+      "autoApprove": [
+        "get_context",
+        "notify_ui",
+        "local_server",
+        "show_credentials_dialog",
+        "configure_omni",
+        "manage_test_agent",
+        "manage_dev_server",
+        "check_credentials",
+        "search_local_telemetry",
+        "discover_agent_traces_metadata",
+        "manage_local_collector"
+      ]
+    }
+  }
+}

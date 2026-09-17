@@ -1,0 +1,21 @@
+# Omni 本地状态。traces.jsonl 可能包含客户 payload；self-evolution 产物同理。
+# 按 omni-self-evolution skill 的要求，.omni/ 不入版本库。
+.omni/
+.env.omni
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+agent/.build/          # pip install --target 产出的 vendored 依赖（cdk synth 需要它存在）
+
+# CDK / Node
+node_modules/
+cdk/cdk.out/
+cdk.context.json
+
+# 运行产物（脚本会重新生成；报告本身入库，原始 dump 不入）
+runs/
+*.raw.jsonl

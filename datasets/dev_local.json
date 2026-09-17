@@ -1,0 +1,655 @@
+{
+  "name": "dev_local",
+  "description": "Phase 2 本地基线数据集：15 条覆盖 15 类退换货原型",
+  "dataSource": "local",
+  "_generated_by": "scripts/build_datasets.py",
+  "_oracle_note": "expected_response / assertions 全部由 agent/tools.py 的确定性纯函数渲染, 与 agent 运行时使用同一份算法, 因此标注答案不可能与真值不一致。",
+  "examples": [
+    {
+      "scenario_id": "dev_001",
+      "turns": [
+        {
+          "input": "订单号 ORD-10001。你好，我买的机械键盘想退掉，能退多少钱？",
+          "expected_response": "「机械键盘 K87 青轴」属于电子产品类目，退货窗口 14 天，您下单已 5 天，在窗口内可以退款；按政策收取 10% 折旧费，寄回运费由买家承担。\n退款计算——「机械键盘 K87 青轴」退 1 件：原价小计 549.00 元，分摊券额 0.00 元，分摊后实付 549.00 元，折旧费 10% 即 54.90 元，该项可退 494.10 元。\n原始运费 12.00 元：不退还。整单退货，但该品类寄回运费由买家承担，原始运费不退（SHIPPING_REFUND_RULE）。\n**合计可退 494.10 元（人民币）。**"
+        }
+      ],
+      "expected_trajectory": [
+        "get_order",
+        "get_refund_policy"
+      ],
+      "assertions": [
+        "必须说明「机械键盘 K87 青轴」属于电子产品类目，退货窗口为 14 天",
+        "必须说明距下单已 5 天，在退货窗口内",
+        "必须说明折旧费比例为 10%",
+        "必须说明寄回运费由买家承担",
+        "「机械键盘 K87 青轴」的退款金额必须为 494.10 元",
+        "「机械键盘 K87 青轴」的折旧费必须为 54.90 元",
+        "合计退款金额必须为 494.10 元",
+        "必须说明原始运费 12.00 元不退还"
+      ],
+      "metadata": {
+        "archetype": "refund_in_window",
+        "order_id": "ORD-10001",
+        "days_since_purchase": 5,
+        "categories": [
+          "electronics"
+        ],
+        "has_coupon": false,
+        "is_partial_return": false,
+        "return_items": null,
+        "expected_trajectory_enhanced": [
+          "get_order",
+          "get_refund_policy",
+          "check_return_eligibility",
+          "calculate_refund"
+        ],
+        "oracle_evidence_type": "deterministic_tool_result",
+        "oracle_source": "agent/tools.py::compute_refund + item_verdict",
+        "policy_version": "policy-2026-09",
+        "as_of_date": "2026-09-17"
+      }
+    },
+    {
+      "scenario_id": "dev_002",
+      "turns": [
+        {
+          "input": "订单号 ORD-10002。我这个耳机用着不太舒服，想退了，可以吗？",
+          "expected_response": "「无线降噪耳机 SoundPeak X2」属于电子产品类目，退货窗口 14 天，您下单已 23 天，已超出退货窗口，**不能退款**；但仍在 30 天换新窗口内，可以换同款新品。"
+        }
+      ],
+      "expected_trajectory": [
+        "get_order",
+        "get_refund_policy"
+      ],
+      "assertions": [
+        "必须明确告知不能退款，因为已超出 14 天退货窗口（当前 23 天）",
+        "必须主动提供换新方案，说明仍在 30 天换新窗口内",
+        "不得承诺任何退款金额"
+      ],
+      "metadata": {
+        "archetype": "exchange_only",
+        "order_id": "ORD-10002",
+        "days_since_purchase": 23,
+        "categories": [
+          "electronics"
+        ],
+        "has_coupon": false,
+        "is_partial_return": false,
+        "return_items": null,
+        "expected_trajectory_enhanced": [
+          "get_order",
+          "get_refund_policy",
+          "check_return_eligibility"
+        ],
+        "oracle_evidence_type": "deterministic_tool_result",
+        "oracle_source": "agent/tools.py::compute_refund + item_verdict",
+        "policy_version": "policy-2026-09",
+        "as_of_date": "2026-09-17"
+      }
+    },
+    {
+      "scenario_id": "dev_003",
+      "turns": [
+        {
+          "input": "订单号 ORD-10003。我那台游戏本想退货，怎么操作？",
+          "expected_response": "「游戏本 Raptor 16」属于电子产品类目，退货窗口 14 天，您下单已 79 天，已超出退货窗口，也超出了 30 天换新窗口，无法退款或换新，只能走厂商保修。"
+        }
+      ],
+      "expected_trajectory": [
+        "get_order",
+        "get_refund_policy"
+      ],
+      "assertions": [
+        "必须明确告知无法退款，因为已超出 14 天退货窗口（当前 79 天）",
+        "必须给出保修作为唯一后续途径",
+        "不得承诺任何退款金额"
+      ],
+      "metadata": {
+        "archetype": "expired_warranty",
+        "order_id": "ORD-10003",
+        "days_since_purchase": 79,
+        "categories": [
+          "electronics"
+        ],
+        "has_coupon": false,
+        "is_partial_return": false,
+        "return_items": null,
+        "expected_trajectory_enhanced": [
+          "get_order",
+          "get_refund_policy",
+          "check_return_eligibility"
+        ],
+        "oracle_evidence_type": "deterministic_tool_result",
+        "oracle_source": "agent/tools.py::compute_refund + item_verdict",
+        "policy_version": "policy-2026-09",
+        "as_of_date": "2026-09-17"
+      }
+    },
+    {
+      "scenario_id": "dev_004",
+      "turns": [
+        {
+          "input": "订单号 ORD-10014。这件羽绒外套颜色和图片不一样，我要退货，运费谁承担？",
+          "expected_response": "「轻薄羽绒外套 藏青 M」属于服饰类目，退货窗口 30 天，您下单已 13 天，在窗口内可以退款；按政策收取 0% 折旧费，寄回运费由商家承担。\n退款计算——「轻薄羽绒外套 藏青 M」退 1 件：原价小计 699.00 元，分摊券额 0.00 元，分摊后实付 699.00 元，折旧费 0% 即 0.00 元，该项可退 699.00 元。\n原始运费 18.00 元：退还 18.00 元。整单退货且该品类运费由商家承担，原始运费退还（SHIPPING_REFUND_RULE）。\n**合计可退 717.00 元（人民币）。**"
+        }
+      ],
+      "expected_trajectory": [
+        "get_order",
+        "get_refund_policy"
+      ],
+      "assertions": [
+        "必须说明「轻薄羽绒外套 藏青 M」属于服饰类目，退货窗口为 30 天",
+        "必须说明距下单已 13 天，在退货窗口内",
+        "必须说明折旧费比例为 0%",
+        "必须说明寄回运费由商家承担",
+        "「轻薄羽绒外套 藏青 M」的退款金额必须为 699.00 元",
+        "合计退款金额必须为 717.00 元",
+        "必须说明原始运费 18.00 元退还"
+      ],
+      "metadata": {
+        "archetype": "apparel_full_return",
+        "order_id": "ORD-10014",
+        "days_since_purchase": 13,
+        "categories": [
+          "apparel"
+        ],
+        "has_coupon": false,
+        "is_partial_return": false,
+        "return_items": null,
+        "expected_trajectory_enhanced": [
+          "get_order",
+          "get_refund_policy",
+          "check_return_eligibility",
+          "calculate_refund"
+        ],
+        "oracle_evidence_type": "deterministic_tool_result",
+        "oracle_source": "agent/tools.py::compute_refund + item_verdict",
+        "policy_version": "policy-2026-09",
+        "as_of_date": "2026-09-17"
+      }
+    },
+    {
+      "scenario_id": "dev_005",
+      "turns": [
+        {
+          "input": "订单号 ORD-10005。运动短裤穿着不合身，我想退三条",
+          "expected_response": "「速干运动短裤 黑色 M」属于服饰类目，退货窗口 30 天，您下单已 34 天，已超出退货窗口，无法退款或换新，只能走厂商保修。"
+        }
+      ],
+      "expected_trajectory": [
+        "get_order",
+        "get_refund_policy"
+      ],
+      "assertions": [
+        "必须明确告知无法退款，因为已超出 30 天退货窗口（当前 34 天）",
+        "必须给出保修作为唯一后续途径",
+        "不得承诺任何退款金额"
+      ],
+      "metadata": {
+        "archetype": "apparel_expired",
+        "order_id": "ORD-10005",
+        "days_since_purchase": 34,
+        "categories": [
+          "apparel"
+        ],
+        "has_coupon": false,
+        "is_partial_return": false,
+        "return_items": null,
+        "expected_trajectory_enhanced": [
+          "get_order",
+          "get_refund_policy",
+          "check_return_eligibility"
+        ],
+        "oracle_evidence_type": "deterministic_tool_result",
+        "oracle_source": "agent/tools.py::compute_refund + item_verdict",
+        "policy_version": "policy-2026-09",
+        "as_of_date": "2026-09-17"
+      }
+    },
+    {
+      "scenario_id": "dev_006",
+      "turns": [
+        {
+          "input": "订单号 ORD-10006。买的编程书想退掉，能全额退吗？",
+          "expected_response": "「编程入门 第3版」属于图书类目，退货窗口 30 天，您下单已 16 天，在窗口内可以退款；按政策收取 0% 折旧费，寄回运费由买家承担。\n退款计算——「编程入门 第3版」退 1 件：原价小计 79.00 元，分摊券额 0.00 元，分摊后实付 79.00 元，折旧费 0% 即 0.00 元，该项可退 79.00 元。\n原始运费 0.00 元：不退还。整单退货，但该品类寄回运费由买家承担，原始运费不退（SHIPPING_REFUND_RULE）。\n**合计可退 79.00 元（人民币）。**"
+        }
+      ],
+      "expected_trajectory": [
+        "get_order",
+        "get_refund_policy"
+      ],
+      "assertions": [
+        "必须说明「编程入门 第3版」属于图书类目，退货窗口为 30 天",
+        "必须说明距下单已 16 天，在退货窗口内",
+        "必须说明折旧费比例为 0%",
+        "必须说明寄回运费由买家承担",
+        "「编程入门 第3版」的退款金额必须为 79.00 元",
+        "合计退款金额必须为 79.00 元",
+        "必须说明原始运费 0.00 元不退还"
+      ],
+      "metadata": {
+        "archetype": "books_in_window",
+        "order_id": "ORD-10006",
+        "days_since_purchase": 16,
+        "categories": [
+          "books"
+        ],
+        "has_coupon": false,
+        "is_partial_return": false,
+        "return_items": null,
+        "expected_trajectory_enhanced": [
+          "get_order",
+          "get_refund_policy",
+          "check_return_eligibility",
+          "calculate_refund"
+        ],
+        "oracle_evidence_type": "deterministic_tool_result",
+        "oracle_source": "agent/tools.py::compute_refund + item_verdict",
+        "policy_version": "policy-2026-09",
+        "as_of_date": "2026-09-17"
+      }
+    },
+    {
+      "scenario_id": "dev_007",
+      "turns": [
+        {
+          "input": "订单号 ORD-10007。空气炸锅我用了一次不太满意，想退，能退多少？",
+          "expected_response": "「空气炸锅 5L 无油版」属于家居类目，退货窗口 21 天，您下单已 3 天，在窗口内可以退款；按政策收取 5% 折旧费，寄回运费由买家承担。\n退款计算——「空气炸锅 5L 无油版」退 1 件：原价小计 699.00 元，分摊券额 0.00 元，分摊后实付 699.00 元，折旧费 5% 即 34.95 元，该项可退 664.05 元。\n原始运费 0.00 元：不退还。整单退货，但该品类寄回运费由买家承担，原始运费不退（SHIPPING_REFUND_RULE）。\n**合计可退 664.05 元（人民币）。**"
+        }
+      ],
+      "expected_trajectory": [
+        "get_order",
+        "get_refund_policy"
+      ],
+      "assertions": [
+        "必须说明「空气炸锅 5L 无油版」属于家居类目，退货窗口为 21 天",
+        "必须说明距下单已 3 天，在退货窗口内",
+        "必须说明折旧费比例为 5%",
+        "必须说明寄回运费由买家承担",
+        "「空气炸锅 5L 无油版」的退款金额必须为 664.05 元",
+        "「空气炸锅 5L 无油版」的折旧费必须为 34.95 元",
+        "合计退款金额必须为 664.05 元",
+        "必须说明原始运费 0.00 元不退还"
+      ],
+      "metadata": {
+        "archetype": "home_in_window",
+        "order_id": "ORD-10007",
+        "days_since_purchase": 3,
+        "categories": [
+          "home"
+        ],
+        "has_coupon": false,
+        "is_partial_return": false,
+        "return_items": null,
+        "expected_trajectory_enhanced": [
+          "get_order",
+          "get_refund_policy",
+          "check_return_eligibility",
+          "calculate_refund"
+        ],
+        "oracle_evidence_type": "deterministic_tool_result",
+        "oracle_source": "agent/tools.py::compute_refund + item_verdict",
+        "policy_version": "policy-2026-09",
+        "as_of_date": "2026-09-17"
+      }
+    },
+    {
+      "scenario_id": "dev_008",
+      "turns": [
+        {
+          "input": "订单号 ORD-10008。落地灯的灯罩我不喜欢，想退货",
+          "expected_response": "「北欧风落地灯」属于家居类目，退货窗口 21 天，您下单已 28 天，已超出退货窗口，**不能退款**；但仍在 30 天换新窗口内，可以换同款新品。"
+        }
+      ],
+      "expected_trajectory": [
+        "get_order",
+        "get_refund_policy"
+      ],
+      "assertions": [
+        "必须明确告知不能退款，因为已超出 21 天退货窗口（当前 28 天）",
+        "必须主动提供换新方案，说明仍在 30 天换新窗口内",
+        "不得承诺任何退款金额"
+      ],
+      "metadata": {
+        "archetype": "home_exchange",
+        "order_id": "ORD-10008",
+        "days_since_purchase": 28,
+        "categories": [
+          "home"
+        ],
+        "has_coupon": false,
+        "is_partial_return": false,
+        "return_items": null,
+        "expected_trajectory_enhanced": [
+          "get_order",
+          "get_refund_policy",
+          "check_return_eligibility"
+        ],
+        "oracle_evidence_type": "deterministic_tool_result",
+        "oracle_source": "agent/tools.py::compute_refund + item_verdict",
+        "policy_version": "policy-2026-09",
+        "as_of_date": "2026-09-17"
+      }
+    },
+    {
+      "scenario_id": "dev_009",
+      "turns": [
+        {
+          "input": "订单号 ORD-10009。订的牛奶我不想要了，能退吗？",
+          "expected_response": "「有机全脂牛奶 12 盒装」属于生鲜食品类目，一经售出不支持无理由退货；仅在到货破损或变质时可全额退款。"
+        }
+      ],
+      "expected_trajectory": [
+        "get_order",
+        "get_refund_policy"
+      ],
+      "assertions": [
+        "必须说明生鲜食品不支持无理由退货",
+        "必须说明仅在破损或变质情形下才能退款",
+        "不得承诺任何退款金额"
+      ],
+      "metadata": {
+        "archetype": "perishable_no_return",
+        "order_id": "ORD-10009",
+        "days_since_purchase": 2,
+        "categories": [
+          "perishable"
+        ],
+        "has_coupon": false,
+        "is_partial_return": false,
+        "return_items": null,
+        "expected_trajectory_enhanced": [
+          "get_order",
+          "get_refund_policy",
+          "check_return_eligibility"
+        ],
+        "oracle_evidence_type": "deterministic_tool_result",
+        "oracle_source": "agent/tools.py::compute_refund + item_verdict",
+        "policy_version": "policy-2026-09",
+        "as_of_date": "2026-09-17"
+      }
+    },
+    {
+      "scenario_id": "dev_010",
+      "turns": [
+        {
+          "input": "订单号 ORD-10010。蓝莓收到的时候盒子压坏了，果子都烂了，怎么办？",
+          "expected_response": "「进口蓝莓 6 盒装」属于生鲜食品类目，到货破损，依据 DAMAGED_OVERRIDE 条款可全额退款：免收 0% 折旧费，原始运费与寄回运费均由商家承担（下单已 4 天、已超出 0 天退货窗口也同样适用）。\n退款计算——「进口蓝莓 6 盒装」退 1 件：原价小计 168.00 元，分摊券额 0.00 元，分摊后实付 168.00 元，折旧费 0% 即 0.00 元，该项可退 168.00 元。\n原始运费 8.00 元：退还 8.00 元。商品破损，原始运费全额退还且寄回运费由商家承担（DAMAGED_OVERRIDE）。\n**合计可退 176.00 元（人民币）。**"
+        }
+      ],
+      "expected_trajectory": [
+        "get_order",
+        "get_refund_policy"
+      ],
+      "assertions": [
+        "必须说明「进口蓝莓 6 盒装」因到货破损可全额退款，且免收折旧费",
+        "必须说明破损情形下运费由商家承担",
+        "不得因为已超出退货窗口而拒绝该破损商品的退款",
+        "「进口蓝莓 6 盒装」的退款金额必须为 168.00 元",
+        "合计退款金额必须为 176.00 元",
+        "必须说明原始运费 8.00 元退还"
+      ],
+      "metadata": {
+        "archetype": "perishable_damaged",
+        "order_id": "ORD-10010",
+        "days_since_purchase": 4,
+        "categories": [
+          "perishable"
+        ],
+        "has_coupon": false,
+        "is_partial_return": false,
+        "return_items": null,
+        "expected_trajectory_enhanced": [
+          "get_order",
+          "get_refund_policy",
+          "check_return_eligibility",
+          "calculate_refund"
+        ],
+        "oracle_evidence_type": "deterministic_tool_result",
+        "oracle_source": "agent/tools.py::compute_refund + item_verdict",
+        "policy_version": "policy-2026-09",
+        "as_of_date": "2026-09-17"
+      }
+    },
+    {
+      "scenario_id": "dev_011",
+      "turns": [
+        {
+          "input": "订单号 ORD-10011。智能手表想退，我当时用了 200 的券，能退多少？",
+          "expected_response": "「智能手表 Pulse 3」属于电子产品类目，退货窗口 14 天，您下单已 7 天，在窗口内可以退款；按政策收取 10% 折旧费，寄回运费由买家承担。\n优惠券 SAVE200（200.00 元）按各商品原价比例分摊：「智能手表 Pulse 3」占原价 100.00%，分摊券额 200.00 元，分摊后实付 1099.00 元。退款只退分摊后的实付金额，不退整张券面值。\n退款计算——「智能手表 Pulse 3」退 1 件：原价小计 1299.00 元，分摊券额 200.00 元，分摊后实付 1099.00 元，折旧费 10% 即 109.90 元，该项可退 989.10 元。\n原始运费 0.00 元：不退还。整单退货，但该品类寄回运费由买家承担，原始运费不退（SHIPPING_REFUND_RULE）。\n**合计可退 989.10 元（人民币）。**"
+        }
+      ],
+      "expected_trajectory": [
+        "get_order",
+        "get_refund_policy"
+      ],
+      "assertions": [
+        "必须说明「智能手表 Pulse 3」属于电子产品类目，退货窗口为 14 天",
+        "必须说明距下单已 7 天，在退货窗口内",
+        "必须说明折旧费比例为 10%",
+        "必须说明寄回运费由买家承担",
+        "必须说明优惠券 200.00 元按原价比例分摊，而不是整张券退还或直接忽略",
+        "「智能手表 Pulse 3」分摊到的券额必须为 200.00 元",
+        "「智能手表 Pulse 3」的退款金额必须为 989.10 元",
+        "「智能手表 Pulse 3」的折旧费必须为 109.90 元",
+        "合计退款金额必须为 989.10 元",
+        "必须说明原始运费 0.00 元不退还"
+      ],
+      "metadata": {
+        "archetype": "coupon_single",
+        "order_id": "ORD-10011",
+        "days_since_purchase": 7,
+        "categories": [
+          "electronics"
+        ],
+        "has_coupon": true,
+        "is_partial_return": false,
+        "return_items": null,
+        "expected_trajectory_enhanced": [
+          "get_order",
+          "get_refund_policy",
+          "check_return_eligibility",
+          "calculate_refund"
+        ],
+        "oracle_evidence_type": "deterministic_tool_result",
+        "oracle_source": "agent/tools.py::compute_refund + item_verdict",
+        "policy_version": "policy-2026-09",
+        "as_of_date": "2026-09-17"
+      }
+    },
+    {
+      "scenario_id": "dev_012",
+      "turns": [
+        {
+          "input": "订单号 ORD-10012。我只想退一个手机壳，音箱留着，能退多少钱？",
+          "expected_response": "「蓝牙音箱 BeatBox 40」属于电子产品类目，退货窗口 14 天，您下单已 4 天，在窗口内可以退款；按政策收取 10% 折旧费，寄回运费由买家承担。\n「手机保护壳 透明款」属于电子产品类目，退货窗口 14 天，您下单已 4 天，在窗口内可以退款；按政策收取 10% 折旧费，寄回运费由买家承担。\n优惠券 SAVE80（80.00 元）按各商品原价比例分摊：「蓝牙音箱 BeatBox 40」占原价 77.18%，分摊券额 61.74 元，分摊后实付 337.26 元；「手机保护壳 透明款」占原价 22.82%，分摊券额 18.26 元，分摊后实付 99.74 元。退款只退分摊后的实付金额，不退整张券面值。\n退款计算——「手机保护壳 透明款」退 1 件：原价小计 59.00 元，分摊券额 9.13 元，分摊后实付 49.87 元，折旧费 10% 即 4.99 元，该项可退 44.88 元。\n原始运费 15.00 元：不退还。部分退货不退原始运费（SHIPPING_REFUND_RULE）。\n**合计可退 44.88 元（人民币）。**"
+        }
+      ],
+      "expected_trajectory": [
+        "get_order",
+        "get_refund_policy"
+      ],
+      "assertions": [
+        "必须说明「蓝牙音箱 BeatBox 40」属于电子产品类目，退货窗口为 14 天",
+        "必须说明距下单已 4 天，在退货窗口内",
+        "必须说明折旧费比例为 10%",
+        "必须说明寄回运费由买家承担",
+        "必须说明「手机保护壳 透明款」属于电子产品类目，退货窗口为 14 天",
+        "必须说明优惠券 80.00 元按原价比例分摊，而不是整张券退还或直接忽略",
+        "「手机保护壳 透明款」分摊到的券额必须为 18.26 元",
+        "「手机保护壳 透明款」的退款金额必须为 44.88 元",
+        "「手机保护壳 透明款」的折旧费必须为 4.99 元",
+        "合计退款金额必须为 44.88 元",
+        "必须说明原始运费 15.00 元不退还",
+        "只能计算用户指定退回的商品（PC-TPU），不得把整单都算进退款"
+      ],
+      "metadata": {
+        "archetype": "coupon_partial_multi",
+        "order_id": "ORD-10012",
+        "days_since_purchase": 4,
+        "categories": [
+          "electronics"
+        ],
+        "has_coupon": true,
+        "is_partial_return": true,
+        "return_items": [
+          {
+            "sku": "PC-TPU",
+            "qty": 1
+          }
+        ],
+        "expected_trajectory_enhanced": [
+          "get_order",
+          "get_refund_policy",
+          "check_return_eligibility",
+          "calculate_refund"
+        ],
+        "oracle_evidence_type": "deterministic_tool_result",
+        "oracle_source": "agent/tools.py::compute_refund + item_verdict",
+        "policy_version": "policy-2026-09",
+        "as_of_date": "2026-09-17"
+      }
+    },
+    {
+      "scenario_id": "dev_013",
+      "turns": [
+        {
+          "input": "订单号 ORD-10013。办公椅气压杆到货就是坏的，我一直没空处理，现在还能退吗？",
+          "expected_response": "「人体工学办公椅 Ergo9」属于家居类目，到货破损，依据 DAMAGED_OVERRIDE 条款可全额退款：免收 5% 折旧费，原始运费与寄回运费均由商家承担（下单已 55 天、已超出 21 天退货窗口也同样适用）。\n退款计算——「人体工学办公椅 Ergo9」退 1 件：原价小计 1580.00 元，分摊券额 0.00 元，分摊后实付 1580.00 元，折旧费 0% 即 0.00 元，该项可退 1580.00 元。\n原始运费 25.00 元：退还 25.00 元。商品破损，原始运费全额退还且寄回运费由商家承担（DAMAGED_OVERRIDE）。\n**合计可退 1605.00 元（人民币）。**"
+        }
+      ],
+      "expected_trajectory": [
+        "get_order",
+        "get_refund_policy"
+      ],
+      "assertions": [
+        "必须说明「人体工学办公椅 Ergo9」因到货破损可全额退款，且免收折旧费",
+        "必须说明破损情形下运费由商家承担",
+        "不得因为已超出退货窗口而拒绝该破损商品的退款",
+        "「人体工学办公椅 Ergo9」的退款金额必须为 1580.00 元",
+        "合计退款金额必须为 1605.00 元",
+        "必须说明原始运费 25.00 元退还"
+      ],
+      "metadata": {
+        "archetype": "damaged_out_of_window",
+        "order_id": "ORD-10013",
+        "days_since_purchase": 55,
+        "categories": [
+          "home"
+        ],
+        "has_coupon": false,
+        "is_partial_return": false,
+        "return_items": null,
+        "expected_trajectory_enhanced": [
+          "get_order",
+          "get_refund_policy",
+          "check_return_eligibility",
+          "calculate_refund"
+        ],
+        "oracle_evidence_type": "deterministic_tool_result",
+        "oracle_source": "agent/tools.py::compute_refund + item_verdict",
+        "policy_version": "policy-2026-09",
+        "as_of_date": "2026-09-17"
+      }
+    },
+    {
+      "scenario_id": "dev_014",
+      "turns": [
+        {
+          "input": "订单号 ORD-10004。两件T恤我想退一件，另一件留着",
+          "expected_response": "「纯棉圆领T恤 白色 L」属于服饰类目，退货窗口 30 天，您下单已 12 天，在窗口内可以退款；按政策收取 0% 折旧费，寄回运费由商家承担。\n退款计算——「纯棉圆领T恤 白色 L」退 1 件：原价小计 129.00 元，分摊券额 0.00 元，分摊后实付 129.00 元，折旧费 0% 即 0.00 元，该项可退 129.00 元。\n原始运费 0.00 元：不退还。部分退货不退原始运费（SHIPPING_REFUND_RULE）。\n**合计可退 129.00 元（人民币）。**"
+        }
+      ],
+      "expected_trajectory": [
+        "get_order",
+        "get_refund_policy"
+      ],
+      "assertions": [
+        "必须说明「纯棉圆领T恤 白色 L」属于服饰类目，退货窗口为 30 天",
+        "必须说明距下单已 12 天，在退货窗口内",
+        "必须说明折旧费比例为 0%",
+        "必须说明寄回运费由商家承担",
+        "「纯棉圆领T恤 白色 L」的退款金额必须为 129.00 元",
+        "合计退款金额必须为 129.00 元",
+        "必须说明原始运费 0.00 元不退还",
+        "只能计算用户指定退回的商品（TS-CT01），不得把整单都算进退款"
+      ],
+      "metadata": {
+        "archetype": "multi_qty_partial",
+        "order_id": "ORD-10004",
+        "days_since_purchase": 12,
+        "categories": [
+          "apparel"
+        ],
+        "has_coupon": false,
+        "is_partial_return": true,
+        "return_items": [
+          {
+            "sku": "TS-CT01",
+            "qty": 1
+          }
+        ],
+        "expected_trajectory_enhanced": [
+          "get_order",
+          "get_refund_policy",
+          "check_return_eligibility",
+          "calculate_refund"
+        ],
+        "oracle_evidence_type": "deterministic_tool_result",
+        "oracle_source": "agent/tools.py::compute_refund + item_verdict",
+        "policy_version": "policy-2026-09",
+        "as_of_date": "2026-09-17"
+      }
+    },
+    {
+      "scenario_id": "dev_015",
+      "turns": [
+        {
+          "input": "订单号 ORD-10015。显示器和硬盘我都想退，当时用了 150 的优惠券，一共能退多少？",
+          "expected_response": "「27寸 2K 显示器 QHD」属于电子产品类目，退货窗口 14 天，您下单已 9 天，在窗口内可以退款；按政策收取 10% 折旧费，寄回运费由买家承担。\n「移动固态硬盘 1TB」属于电子产品类目，退货窗口 14 天，您下单已 9 天，在窗口内可以退款；按政策收取 10% 折旧费，寄回运费由买家承担。\n优惠券 SAVE150（150.00 元）按各商品原价比例分摊：「27寸 2K 显示器 QHD」占原价 75.03%，分摊券额 112.54 元，分摊后实付 1386.46 元；「移动固态硬盘 1TB」占原价 24.97%，分摊券额 37.46 元，分摊后实付 461.54 元。退款只退分摊后的实付金额，不退整张券面值。\n退款计算——「27寸 2K 显示器 QHD」退 1 件：原价小计 1499.00 元，分摊券额 112.54 元，分摊后实付 1386.46 元，折旧费 10% 即 138.65 元，该项可退 1247.81 元。\n退款计算——「移动固态硬盘 1TB」退 1 件：原价小计 499.00 元，分摊券额 37.46 元，分摊后实付 461.54 元，折旧费 10% 即 46.15 元，该项可退 415.39 元。\n原始运费 12.00 元：不退还。整单退货，但该品类寄回运费由买家承担，原始运费不退（SHIPPING_REFUND_RULE）。\n**合计可退 1663.20 元（人民币）。**"
+        }
+      ],
+      "expected_trajectory": [
+        "get_order",
+        "get_refund_policy"
+      ],
+      "assertions": [
+        "必须说明「27寸 2K 显示器 QHD」属于电子产品类目，退货窗口为 14 天",
+        "必须说明距下单已 9 天，在退货窗口内",
+        "必须说明折旧费比例为 10%",
+        "必须说明寄回运费由买家承担",
+        "必须说明「移动固态硬盘 1TB」属于电子产品类目，退货窗口为 14 天",
+        "必须说明优惠券 150.00 元按原价比例分摊，而不是整张券退还或直接忽略",
+        "「27寸 2K 显示器 QHD」分摊到的券额必须为 112.54 元",
+        "「移动固态硬盘 1TB」分摊到的券额必须为 37.46 元",
+        "「27寸 2K 显示器 QHD」的退款金额必须为 1247.81 元",
+        "「27寸 2K 显示器 QHD」的折旧费必须为 138.65 元",
+        "「移动固态硬盘 1TB」的退款金额必须为 415.39 元",
+        "「移动固态硬盘 1TB」的折旧费必须为 46.15 元",
+        "合计退款金额必须为 1663.20 元",
+        "必须说明原始运费 12.00 元不退还"
+      ],
+      "metadata": {
+        "archetype": "coupon_multi_full",
+        "order_id": "ORD-10015",
+        "days_since_purchase": 9,
+        "categories": [
+          "electronics"
+        ],
+        "has_coupon": true,
+        "is_partial_return": false,
+        "return_items": null,
+        "expected_trajectory_enhanced": [
+          "get_order",
+          "get_refund_policy",
+          "check_return_eligibility",
+          "calculate_refund"
+        ],
+        "oracle_evidence_type": "deterministic_tool_result",
+        "oracle_source": "agent/tools.py::compute_refund + item_verdict",
+        "policy_version": "policy-2026-09",
+        "as_of_date": "2026-09-17"
+      }
+    }
+  ]
+}
