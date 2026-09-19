@@ -154,14 +154,25 @@ tr td:first-child{color:var(--cyan)}
 .slide-footer{position:fixed;right:clamp(.8rem,2vw,1.6rem);bottom:clamp(.7rem,1.8vw,1.3rem);z-index:200;font-size:clamp(.52rem,.85vw,.68rem);color:var(--gray);opacity:.55;max-width:60vw;text-align:right}
 .keyboard-hint{position:fixed;left:50%;bottom:clamp(.6rem,1.6vw,1.1rem);transform:translateX(-50%);z-index:200;font-size:clamp(.55rem,.9vw,.72rem);color:var(--green-mid);opacity:.6;animation:fadehint 4s ease forwards}
 @keyframes fadehint{0%,70%{opacity:.6}100%{opacity:0}}
+/* --- speaker notes panel (toggle with N) --- */
+.notes-panel{position:fixed;left:0;right:0;bottom:0;z-index:400;display:none;
+  max-height:40vh;overflow:auto;background:rgba(1,4,9,.97);border-top:2px solid var(--green);
+  box-shadow:0 -10px 40px rgba(0,0,0,.6);padding:clamp(.7rem,2vw,1.4rem) clamp(1rem,4vw,3.5rem)}
+.notes-panel.show{display:block}
+.notes-head{font-size:var(--small-size);color:var(--green);font-weight:700;letter-spacing:.08em;margin-bottom:.5rem;text-shadow:0 0 10px var(--glow)}
+.notes-head .nkey{color:var(--gray);font-weight:400;letter-spacing:0}
+.notes-body{font-size:clamp(.85rem,1.5vw,1.15rem);line-height:1.65;color:#c9e7cf}
+.notes-body .lead{color:var(--green);font-weight:700}
+body.notes-open .slide-footer{display:none}
 </style>
 </head>
 <body>
 <div id="progress"></div>
 <nav id="dots"></nav>
-<div class="page-number"><span class="cur">01</span> / 24</div>
+<div class="page-number"><span class="cur">01</span> / 25</div>
+<div class="notes-panel" id="notesPanel"><div class="notes-head">SPEAKER NOTES <span class="nkey">— press N to hide</span></div><div class="notes-body" id="notesBody"></div></div>
 <div class="slide-footer">© 2026, Amazon Web Services, Inc. or its affiliates. All rights reserved.</div>
-<div class="keyboard-hint">↑ ↓ / space / scroll to navigate</div>
+<div class="keyboard-hint">↑ ↓ / space / scroll · press N for speaker notes</div>
 
 <!-- ═══ SLIDE 1 — Title ═══ -->
 <section class="slide"><div class="slide-content"><div class="terminal">
@@ -501,7 +512,22 @@ tr td:first-child{color:var(--cyan)}
   </div>
 </div></div></section>
 
-<!-- ═══ SLIDE 24 — closing ═══ -->
+<!-- ═══ SLIDE 24 — the real, reusable artifact ═══ -->
+<section class="slide"><div class="slide-content"><div class="terminal wide">
+  <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="title">the real artifact</span></div>
+  <div class="cmd r"><span class="arrow">&gt;</span> cat <span class="flag">.kiro/skills/omni-self-evolution/SKILL.md</span> <span class="cm"># committed to the repo</span></div>
+  <div class="stitle r">Not a demo script — a reusable SOP</div>
+  <div class="output r" style="font-size:var(--body-size);line-height:1.9">
+    <span><span class="cm"># omni-self-evolution — a 459-line procedural methodology</span></span>
+    <span>&nbsp;&nbsp;<span class="ok">›</span> 11 steps · 6 hard invariants · 6 statistical gates · 4 decisions</span>
+    <span>&nbsp;&nbsp;<span class="ok">›</span> read-only, prompt-only, never self-deploys</span>
+    <span>&nbsp;&nbsp;<span class="ok">›</span> ships in the repo: <span class="str">.kiro/skills/</span> and <span class="str">.claude/skills/</span> — pick it up in any project</span>
+  </div>
+  <p class="sub r" style="margin-top:.9rem">This whole demo <span class="emph">was its validation case</span> — the SOP produced <span class="emph">NO_CHANGE</span> and its held-out step caught c2's overfitting. The methodology isn't asserted; <span class="emph">it's been exercised end-to-end.</span></p>
+  <p class="note r"># A skill you can reuse &gt; a slide you can admire. The artifact is the takeaway.</p>
+</div></div></section>
+
+<!-- ═══ SLIDE 25 — closing ═══ -->
 <section class="slide"><div class="slide-content"><div class="terminal">
   <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="title">what this really proves</span></div>
   <div class="cmd r"><span class="arrow">&gt;</span> summary</div>
@@ -525,6 +551,47 @@ tr td:first-child{color:var(--cyan)}
   const pageCur = document.querySelector('.page-number .cur');
   const total = slides.length;
   let current = 0, isNav = false;
+
+  // 演讲者备注（中文，来自 docs/STORYLINE-zh.md，按页对应）。按 N 切换。
+  const NOTES = [
+    `<span class="lead">开场。</span>我们有个已上线的退货客服，效果不好。今天讲的不是"能不能自动优化"——那太容易；而是"能不能拒绝一个假优化"。能拒绝，才敢自动。`,
+    `让 AI 改自己的 prompt、再让 AI 打分，最容易得到的是"在你盯着看的那批数据上，它看起来变好了"——骗过的是你自己。所以真正难的是"可信"，不是"变好"。`,
+    `三件事必须同时成立：可观测（不然不知道哪错了）、可评估（不然"更好"只是感觉）、可复现（不然今天的提升明天没了）。多数演示只做了第一件。`,
+    `起点是一个故意做弱的 agent，系统提示只有一句"友好简洁让用户满意"。每一处缺陷都对应一个能被评估器抓住的失败模式。region 全链路 us-west-2，和 Omni Space 同区，否则 trace 查询会静默返回 0 行。`,
+    `选退货客服，是因为答案能被精确验证。规则故意做复杂；55 单切成三份互不重叠的数据；招牌题 ORD-10012 只退一个手机壳，正确答案 ¥44.88。标准答案由代码算，不是人手写——手写会算错，污染整条评估。`,
+    `六个阶段首尾相接成闭环。入口是生产 trace，出口是四选一的决策。贯穿始终的铁律：整个循环里只有 prompt 能改，模型/工具/代码/评估器全部冻结。`,
+    `三份数据是三层防线：control 反复调、holdout 只在第 10 步看一次抓过拟合、verify 锁到最后。切分是 scenario_id 的纯函数——防止有人反复重摇直到某个候选恰好通过。`,
+    `先剧透：结局是 NO_CHANGE。候选 c2 在控制集上看着赢了，被留出集揭穿是过拟合。这不是失败的 demo——能拒绝一个假优化，正是这套方法论的价值。`,
+    `Omni 16 个工具：9 个深度使用，3 个因本机 region/DNS 问题走了 boto3 替代通路（效果一样、还能进 CI），4 个是 IDE 增强没用到。关键点：Omni 的产物都落在标准 CloudWatch，没有 Omni 也取得到。`,
+    `20 多个托管评估器分三层。我们自建了 PolicyGrounding，问一个正交的问题：回答里的政策数值，是查工具来的、还是编的？内置的 Correctness 只看最后那个数字，看不到这个。`,
+    `整条评估管道进了 CDK。一行 tracingEnabled 换来整条 trace 投递链路；改了 prompt，资源哈希变、runtime 出新版本、endpoint 自动跟上。不用手点控制台。`,
+    `这是方法论 SOP 的 11 步骨架。每一步都是"执行 → 验证 → 才能进下一步"。`,
+    `第 1–4 步钉地基：预检四个硬前提、冻结基线（用跨进程稳定的哈希）、只读拉 trace、在重放前冻结评估器口径。就在第 4 步抓到 Helpfulness 真实值域是 0–6 不是 0–1，否则整维分数会被压平。`,
+    `第 5、6 步找病根、切数据。三个独立来源一致指向 Helpfulness 全军覆没。第一次 holdout 只有 3 条 → NO_DECISION；正确应对是补真实流量，绝不降门槛、绝不重切。`,
+    `第 7 步：每个候选只改一件事。c1 加约束、c2 改成四步流程、c3 加算术规则。c1 和 c2 故意打同一个病根，比较"加"和"改"哪个有效。提示里绝不写订单号或答案。`,
+    `第 8 步配对重放，必须是脚本、不能让 agent 自己发：基线现场重跑、变体靠环境变量切换、每次核对 trace 上的版本。这条版本核对救了场——有整整一个变体 56 格被悄悄标错，是它抓住的。`,
+    `第 9 步六道统计门，全过才算赢。bootstrap 是对样本重采样，问的是"能不能泛化到新输入"，而不是"这批测得准不准"。每道门都有它的论证。`,
+    `第 9 步结果：c2 差一点点。质量和置信区间都过了，只在延迟上超了 1.11 个点。诱惑是松门槛，纪律是改候选——精简版 c4 反而把提升压没了，说明质量和延迟在"改措辞"这条路上分不开。`,
+    `全场最关键一页。同一个 c2：控制集上 +0.0348、区间漂亮；留出集上塌成 −0.0018，还在一个控制集从没暴露过的维度上回退了 0.13。如果当初松延迟门让它上线，会部署一个更差的 prompt、而控制集一路绿灯。是留出集、不是任何阈值，拦下了它。`,
+    `第 11 步四种决策必须区分。NO_CHANGE（测了没赢）不等于 NO_DECISION（根本没测成），混起来会让一次没测成的运行被当成"基线已验证"。这次的 NO_CHANGE 是成功的运行。`,
+    `两种模式：人在环内（每步等人点头，慢但有背书）、人在环上（自动跑、人监督结果，快但可能自动做错）。不是二选一，成熟的自动化按环节分工。`,
+    `本 demo 的分界：分析和评估是"人在环上"，无人干预地产出带证据的建议；出口——是否上线、是否豁免某道门——是"人在环内"，因为有生产爆炸半径，SOP 评估不了。`,
+    `三个机制守住这条线：只读不部署；豁免必须留痕（阈值不改、门照记不通过、结局单记）；留出集自动挡过拟合、且不可豁免——因为人会偏向自己想要的候选。`,
+    `<span class="lead">真实成果页。</span>这不只是个演示脚本：omni-self-evolution 是一份 459 行、可复用、已入库的 SOP（11 步 + 6 条不变量 + 6 道门）。而本 demo 就是它的验证案例——它真的跑出了 NO_CHANGE、并用留出集抓住了 c2 的过拟合。方法论不是嘴上说的，是端到端跑过的。`,
+    `<span class="lead">收尾。</span>让人做价值判断（6 秒变 6.6 秒值不值），让机器防自欺（提升是真的还是过拟合）。能拒绝，才敢自动——这是把 agent 自我进化接进生产的前提。`
+  ];
+  const notesPanel = document.getElementById('notesPanel');
+  const notesBody = document.getElementById('notesBody');
+  let notesOpen = false;
+  function renderNotes(){
+    notesBody.innerHTML = NOTES[current] || '<span class="lead">（本页暂无备注）</span>';
+  }
+  function toggleNotes(){
+    notesOpen = !notesOpen;
+    notesPanel.classList.toggle('show', notesOpen);
+    document.body.classList.toggle('notes-open', notesOpen);
+    if(notesOpen) renderNotes();
+  }
 
   // build nav dots
   slides.forEach(function(_,i){
@@ -553,6 +620,7 @@ tr td:first-child{color:var(--cyan)}
     bar.style.width = (((idx+1)/total)*100)+'%';
     dots.forEach(function(d,i){d.classList.toggle('active',i===idx)});
     pageCur.textContent = String(idx+1).padStart(2,'0');
+    if(notesOpen) renderNotes();
   }
   function goTo(idx){
     if(idx<0||idx>=total||isNav) return;
@@ -566,6 +634,7 @@ tr td:first-child{color:var(--cyan)}
     else if(e.key==='ArrowUp'||e.key==='PageUp'){e.preventDefault();goTo(current-1);}
     else if(e.key==='Home'){e.preventDefault();goTo(0);}
     else if(e.key==='End'){e.preventDefault();goTo(total-1);}
+    else if(e.key==='n'||e.key==='N'){e.preventDefault();toggleNotes();}
   });
   var wt=0;
   document.addEventListener('wheel',function(e){
