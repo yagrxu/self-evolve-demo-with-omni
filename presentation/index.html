@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Self-Evolution — from production traces to an auditable prompt decision</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<style>
+/* ===========================================
+   THEME (Terminal Green — GitHub dark + terminal green)
+   =========================================== */
+:root{
+  --bg:#0d1117; --bg-2:#010409; --dim:#161b22; --panel:#0d1117;
+  --green:#39d353; --green-mid:rgba(57,211,83,.4); --glow:rgba(57,211,83,.14);
+  --blue:#58a6ff; --orange:#f78166; --red:#ff7b72; --purple:#d2a8ff;
+  --cyan:#a5d6ff; --gray:#8b949e; --yellow:#e3b341;
+  --border:rgba(57,211,83,.22);
+  /* Typography — clamp() only */
+  --title-size:clamp(1.5rem,5vw,3.4rem);
+  --h2-size:clamp(1.1rem,3vw,2.1rem);
+  --h3-size:clamp(.95rem,2vw,1.4rem);
+  --body-size:clamp(.72rem,1.35vw,1rem);
+  --small-size:clamp(.6rem,1vw,.82rem);
+  --slide-padding:clamp(1rem,4vw,3.5rem);
+  --content-gap:clamp(.5rem,2vw,1.5rem);
+  --ease:cubic-bezier(.16,1,.3,1);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+
+/* --- viewport-base.css (mandatory, full) --- */
+html,body{height:100%;overflow-x:hidden;scrollbar-width:none}
+html::-webkit-scrollbar,body::-webkit-scrollbar{display:none}
+html{scroll-snap-type:y mandatory;scroll-behavior:smooth}
+.slide{width:100vw;height:100vh;height:100dvh;overflow:hidden;scroll-snap-align:start;scroll-snap-stop:always;display:flex;flex-direction:column;position:relative}
+.slide-content{flex:1;display:flex;flex-direction:column;justify-content:center;max-height:100%;overflow:hidden;padding:var(--slide-padding)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));gap:clamp(.5rem,1.5vw,1rem)}
+img,.image-container{max-width:100%;max-height:min(50vh,400px);object-fit:contain}
+@media(max-height:700px){:root{--slide-padding:clamp(.75rem,3vw,2rem);--content-gap:clamp(.4rem,1.5vw,1rem);--title-size:clamp(1.25rem,4.5vw,2.5rem);--h2-size:clamp(1rem,3vw,1.7rem)}}
+@media(max-height:600px){:root{--slide-padding:clamp(.5rem,2.5vw,1.5rem);--title-size:clamp(1.1rem,4vw,2rem);--body-size:clamp(.66rem,1.2vw,.9rem)} #dots,.keyboard-hint{display:none}}
+@media(max-height:500px){:root{--slide-padding:clamp(.4rem,2vw,1rem);--title-size:clamp(1rem,3.5vw,1.5rem);--h2-size:clamp(.9rem,2.5vw,1.25rem);--body-size:clamp(.62rem,1vw,.82rem)}}
+@media(max-width:600px){:root{--title-size:clamp(1.25rem,7vw,2.5rem)} .grid{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.2s!important}html{scroll-behavior:auto}.cursor::after{animation:none}.slide::before{background:none}}
+
+/* --- base --- */
+body{font-family:'JetBrains Mono',monospace;background:var(--bg);color:var(--green);
+  background-image:radial-gradient(circle at 50% 0,rgba(57,211,83,.05),transparent 60%)}
+.slide::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.12) 2px,rgba(0,0,0,.12) 4px);pointer-events:none;z-index:2}
+.slide::after{content:'';position:absolute;inset:0;box-shadow:inset 0 0 130px var(--glow);pointer-events:none;z-index:1}
+.slide-content{z-index:3}
+
+/* --- terminal chrome --- */
+.terminal{border:1px solid var(--green);border-radius:7px;padding:clamp(.9rem,2.6vw,2.2rem);
+  background:var(--dim);position:relative;width:100%;max-width:64rem;margin:0 auto;
+  box-shadow:0 0 34px var(--glow),inset 0 0 60px rgba(0,0,0,.45);max-height:88vh;overflow:hidden;
+  display:flex;flex-direction:column}
+.terminal.wide{max-width:74rem}
+.bar{display:flex;gap:.5rem;margin-bottom:clamp(.6rem,1.6vw,1.1rem);padding-bottom:.6rem;
+  border-bottom:1px solid var(--border);align-items:center}
+.dot{width:11px;height:11px;border-radius:50%;background:var(--green);opacity:.5}
+.dot:first-child{background:#ff5f57;opacity:1}.dot:nth-child(2){background:#febc2e;opacity:1}.dot:nth-child(3){background:#28c840;opacity:1}
+.bar .title{margin-left:.6rem;font-size:var(--small-size);color:var(--gray)}
+.prompt{opacity:.6;font-size:var(--small-size);margin-bottom:.15rem}
+.prompt .path{color:var(--blue)}
+.cmd{font-size:clamp(.78rem,1.4vw,1.05rem);margin-bottom:clamp(.6rem,1.6vw,1.15rem)}
+.cmd .arrow{color:var(--orange);font-weight:700}.cmd .flag{color:var(--purple)}
+
+/* --- typography --- */
+h1{font-size:var(--title-size);font-weight:700;line-height:1.08;text-shadow:0 0 22px var(--glow);margin-bottom:.15em}
+h2.headline{font-size:var(--h2-size);font-weight:700;line-height:1.15;text-shadow:0 0 14px var(--glow);margin-bottom:.4em}
+.sub{font-size:clamp(.9rem,2vw,1.4rem);font-weight:400;opacity:.72;line-height:1.4}
+.kw{color:var(--red)}.str{color:var(--cyan)}.fn{color:var(--purple)}.cm{color:var(--gray)}.num{color:var(--blue)}.warn{color:var(--yellow)}
+.big{font-size:clamp(1.6rem,4.5vw,3rem);font-weight:700;color:var(--green);text-shadow:0 0 20px var(--glow)}
+.emph{color:var(--green);font-weight:700}
+
+/* --- output block --- */
+.output{font-size:var(--small-size);line-height:1.7;opacity:.82}
+.output>span{display:block}
+.note{margin-top:clamp(.5rem,1.4vw,1rem);font-size:var(--small-size);opacity:.55;line-height:1.6}
+
+/* --- lists --- */
+.flist{list-style:none;overflow:auto}
+.flist li{font-size:var(--body-size);line-height:1.5;padding:clamp(.3rem,.7vw,.55rem) 0;border-bottom:1px solid rgba(57,211,83,.09);display:flex;gap:.6em;align-items:baseline}
+.flist li:last-child{border-bottom:none}
+.flist .sym{color:var(--orange);font-weight:700;flex-shrink:0}
+.flist .tag{color:var(--gray);font-size:var(--small-size);margin-left:auto;flex-shrink:0}
+
+/* --- generic table --- */
+table{width:100%;border-collapse:collapse;font-size:var(--small-size)}
+th,td{text-align:left;padding:clamp(.25rem,.7vw,.5rem) .6rem;border-bottom:1px solid var(--border)}
+th{color:var(--green);font-weight:700;border-bottom:1px solid var(--green)}
+td{color:var(--gray)}
+tr td:first-child{color:var(--cyan)}
+.ok{color:var(--green);font-weight:700}.bad{color:var(--red);font-weight:700}.wv{color:var(--yellow);font-weight:700}
+
+/* --- section title --- */
+.stitle{font-size:var(--h3-size);font-weight:700;margin-bottom:clamp(.5rem,1.4vw,1rem);text-shadow:0 0 12px var(--glow)}
+.stitle .n{color:var(--orange);margin-right:.5em}
+
+/* --- card grid --- */
+.cards{display:grid;gap:clamp(.5rem,1.3vw,.9rem);grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr))}
+.card{border:1px solid var(--border);border-radius:5px;padding:clamp(.6rem,1.6vw,1.1rem);background:rgba(57,211,83,.04)}
+.card .ic{color:var(--green);margin-bottom:.4rem}
+.card .ic svg{width:clamp(22px,2.8vw,32px);height:clamp(22px,2.8vw,32px);stroke:var(--green);stroke-width:1.5}
+.card h3{font-size:var(--h3-size);margin-bottom:.3rem;color:var(--green)}
+.card p{font-size:var(--small-size);color:var(--gray);line-height:1.5}
+
+/* --- tool chip grid (Omni 16) --- */
+.chips{display:grid;grid-template-columns:repeat(4,1fr);gap:clamp(.35rem,.9vw,.6rem)}
+@media(max-width:600px){.chips{grid-template-columns:repeat(2,1fr)}}
+.chip{border:1px solid var(--border);border-radius:5px;padding:clamp(.4rem,1vw,.7rem);font-size:var(--small-size);line-height:1.35}
+.chip.used{border-color:var(--green);background:rgba(57,211,83,.1);box-shadow:0 0 14px var(--glow)}
+.chip.used .nm{color:var(--green);font-weight:700}
+.chip.alt{border-color:rgba(227,179,65,.4);background:rgba(227,179,65,.05)}
+.chip.alt .nm{color:var(--yellow)}
+.chip.off{opacity:.4}
+.chip .nm{display:block;color:var(--gray)}
+.chip .role{display:block;color:var(--gray);opacity:.7;font-size:clamp(.55rem,.9vw,.7rem);margin-top:.15rem}
+
+/* --- process flow --- */
+.flow{display:flex;flex-wrap:wrap;gap:clamp(.3rem,.9vw,.6rem);align-items:stretch;justify-content:center}
+.step{border:1px solid var(--border);border-radius:5px;padding:clamp(.45rem,1.1vw,.8rem) clamp(.6rem,1.4vw,1rem);
+  background:rgba(57,211,83,.04);font-size:var(--small-size);flex:1 1 auto;min-width:clamp(90px,14vw,150px);text-align:center}
+.step .p{color:var(--orange);font-weight:700;display:block;font-size:clamp(.6rem,1vw,.75rem)}
+.step .t{color:var(--green);display:block;margin-top:.2rem;line-height:1.3}
+.arrow-r{align-self:center;color:var(--green-mid);font-weight:700}
+
+/* --- two column --- */
+.two{display:grid;grid-template-columns:1fr 1fr;gap:clamp(.7rem,2vw,1.6rem)}
+@media(max-width:600px){.two{grid-template-columns:1fr}}
+
+/* --- cursor + reveal --- */
+.cursor::after{content:'\2588';animation:blink 1s step-end infinite;color:var(--green)}
+@keyframes blink{50%{opacity:0}}
+.r{opacity:0;transform:translateY(16px);transition:opacity .55s var(--ease),transform .55s var(--ease)}
+.slide.visible .r{opacity:1;transform:translateY(0)}
+.slide.visible .r:nth-child(1){transition-delay:.05s}
+.slide.visible .r:nth-child(2){transition-delay:.12s}
+.slide.visible .r:nth-child(3){transition-delay:.19s}
+.slide.visible .r:nth-child(4){transition-delay:.26s}
+.slide.visible .r:nth-child(5){transition-delay:.33s}
+.slide.visible .r:nth-child(6){transition-delay:.4s}
+.slide.visible .r:nth-child(7){transition-delay:.47s}
+.slide.visible .r:nth-child(8){transition-delay:.54s}
+.slide.visible .r:nth-child(9){transition-delay:.61s}
+
+/* --- chrome: progress, dots, page number, footer, hint --- */
+#progress{position:fixed;top:0;left:0;height:3px;width:0;background:var(--green);z-index:200;transition:width .35s ease;box-shadow:0 0 8px var(--green)}
+#dots{position:fixed;right:clamp(.6rem,1.6vw,1.3rem);top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:10px;z-index:200}
+#dots a{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--green-mid);cursor:pointer;transition:background .3s,box-shadow .3s,border-color .3s}
+#dots a.active{background:var(--green);border-color:var(--green);box-shadow:0 0 8px var(--green)}
+.page-number{position:fixed;left:clamp(.8rem,2vw,1.6rem);bottom:clamp(.7rem,1.8vw,1.3rem);z-index:200;font-size:var(--small-size);color:var(--green-mid)}
+.page-number .cur{color:var(--green)}
+.slide-footer{position:fixed;right:clamp(.8rem,2vw,1.6rem);bottom:clamp(.7rem,1.8vw,1.3rem);z-index:200;font-size:clamp(.52rem,.85vw,.68rem);color:var(--gray);opacity:.55;max-width:60vw;text-align:right}
+.keyboard-hint{position:fixed;left:50%;bottom:clamp(.6rem,1.6vw,1.1rem);transform:translateX(-50%);z-index:200;font-size:clamp(.55rem,.9vw,.72rem);color:var(--green-mid);opacity:.6;animation:fadehint 4s ease forwards}
+@keyframes fadehint{0%,70%{opacity:.6}100%{opacity:0}}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<nav id="dots"></nav>
+<div class="page-number"><span class="cur">01</span> / 24</div>
+<div class="slide-footer">© 2026, Amazon Web Services, Inc. or its affiliates. All rights reserved.</div>
+<div class="keyboard-hint">↑ ↓ / space / scroll to navigate</div>
+
+<!-- ═══ SLIDE 1 — Title ═══ -->
+<section class="slide"><div class="slide-content"><div class="terminal">
+  <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="title">agent-self-evolution — demo</span></div>
+  <div class="prompt r">builder@aws <span class="path">~/self-evolve-demo-with-omni</span></div>
+  <div class="cmd r"><span class="arrow">&gt;</span> ./run-loop <span class="flag">--agent order_support --only-prompt</span></div>
+  <h1 class="r">Agent Self-Evolution</h1>
+  <p class="sub r">From production traces to an <span class="emph">auditable</span> prompt decision</p>
+  <div class="output r" style="margin-top:1rem">
+    <span><span class="cm"># Bedrock AgentCore &nbsp;·&nbsp; CloudWatch Omni &nbsp;·&nbsp; Strands &nbsp;·&nbsp; CDK</span></span>
+    <span><span class="kw">const</span> loop = <span class="fn">selfEvolve</span>({ mutate: <span class="str">"prompt-only"</span>, prove: <span class="str">"held-out"</span> });</span>
+    <span><span class="cm"># the point is not "can optimize" — it is "can reject a fake optimization" _</span><span class="cursor"></span></span>
+  </div>
+</div></div></section>
+
+<!-- ═══ SLIDE 2 — One-line problem ═══ -->
+<section class="slide"><div class="slide-content"><div class="terminal">
+  <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="title">the problem</span></div>
+  <div class="cmd r"><span class="arrow">&gt;</span> why <span class="flag">--this-demo</span></div>
+  <h2 class="headline r">A deployed agent isn't good enough.<br>Can it improve itself — <span class="emph">credibly</span>?</h2>
+  <div class="output r">
+    <span><span class="cm"># "improve" is easy. "credibly" is the hard part.</span></span>
+    <span><span class="cm"># Let an LLM rewrite its own prompt, then let an LLM judge the result —</span></span>
+    <span><span class="cm"># and you most easily get "it looks better on the data you were staring at."</span></span>
+  </div>
+  <p class="sub r" style="margin-top:1rem">What this demo proves is not <span class="emph">"can optimize"</span> — it's <span class="emph">"can optimize AND reject a false optimization."</span></p>
+</div></div></section>
+
+<!-- ═══ SLIDE 3 — Three prerequisites ═══ -->
+<section class="slide"><div class="slide-content"><div class="terminal wide">
+  <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="title">preconditions</span></div>
+  <div class="cmd r"><span class="arrow">&gt;</span> check <span class="flag">--prerequisites</span></div>
+  <div class="stitle r">Three things must hold at once</div>
+  <div class="cards">
+    <div class="card r"><div class="ic"><i data-lucide="eye"></i></div><h3>Observable</h3><p>Without it you can't tell where the agent goes wrong in prod. → AgentCore + ADOT → X-Ray / CloudWatch.</p></div>
+    <div class="card r"><div class="ic"><i data-lucide="scale"></i></div><h3>Evaluable</h3><p>Without it "better" is a feeling. → Omni managed evaluators + a custom LLM-judge.</p></div>
+    <div class="card r"><div class="ic"><i data-lucide="repeat"></i></div><h3>Reproducible</h3><p>Without it today's gain can't be reproduced tomorrow. → frozen prompt hash / dataset version / scoring semantics / fixed "today".</p></div>
+  </div>
+  <p class="note r"># Most "auto-optimization" demos do only the first, and leave 2 &amp; 3 to vibes.</p>
+</div></div></section>
+
+<!-- ═══ SLIDE 4 — Tech stack ═══ -->
+<section class="slide"><div class="slide-content"><div class="terminal wide">
+  <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="title">stack</span></div>
+  <div class="cmd r"><span class="arrow">&gt;</span> cat <span class="flag">stack.txt</span></div>
+  <div class="output r" style="font-size:var(--body-size);line-height:2">
+    <span><span class="cm">agent   </span> Strands Agents + BedrockAgentCoreApp <span class="cm">(Python 3.12)</span></span>
+    <span><span class="cm">model   </span> Claude Haiku 4.5 <span class="warn">(deliberately weak starting point)</span></span>
+    <span><span class="cm">deploy  </span> AgentCore Runtime · Direct Code Deploy <span class="cm">(S3 zip, no Docker)</span></span>
+    <span><span class="cm">tracing </span> ADOT (opentelemetry-instrument) → X-Ray → CloudWatch Logs</span>
+    <span><span class="cm">eval    </span> CloudWatch Omni <span class="cm">(16 MCP tools + managed evaluators)</span></span>
+    <span><span class="cm">iac     </span> AWS CDK <span class="cm">— Runtime + Evaluator + OnlineEvaluation all declarative</span></span>
+    <span><span class="cm">region  </span> <span class="emph">us-west-2</span> <span class="cm">— same as the Omni Space, or trace queries silently return 0 rows</span></span>
+  </div>
+  <p class="note r"># v1 system prompt is one sentence: "be friendly and concise, make the user happy." Every weakness is designed to map to one detectable failure mode.</p>
+</div></div></section>
+
+<!-- ═══ SLIDE 5 — Scenario ═══ -->
+<section class="slide"><div class="slide-content"><div class="terminal wide">
+  <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="title">scenario</span></div>
+  <div class="cmd r"><span class="arrow">&gt;</span> describe <span class="flag">--scenario ecommerce-returns</span></div>
+  <div class="stitle r">E-commerce order-returns support</div>
+  <ul class="flist r">
+    <li><span class="sym">$</span><span>5 categories × distinct return windows / restocking fees / shipping rules + 3 cross-cutting rules (coupon proration, shipping refund, damage override)</span></li>
+    <li><span class="sym">$</span><span>55 orders split into <span class="emph">three disjoint datasets</span>: dev_local (15) · prod_sim (20) · verify (20, held out until the very end)</span></li>
+    <li><span class="sym">$</span><span>Signature case ORD-10012: return one phone case → correct answer <span class="emph">¥44.88</span>, needs coupon-by-list-price + per-unit split + restocking fee</span></li>
+  </ul>
+  <p class="note r"># The dataset oracle is rendered by the agent's own pure functions — hand-written labels would mis-score the arithmetic and poison every evaluation.</p>
+</div></div></section>
+
+<!-- ═══ SLIDE 6 — Six-phase loop ═══ -->
+<section class="slide"><div class="slide-content"><div class="terminal wide">
+  <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="title">the loop</span></div>
+  <div class="cmd r"><span class="arrow">&gt;</span> loop <span class="flag">--overview</span></div>
+  <div class="stitle r">Six phases, one closed loop</div>
+  <div class="flow r">
+    <div class="step"><span class="p">PHASE 1</span><span class="t">v1 agent<br>+ tracing</span></div><span class="arrow-r">›</span>
+    <div class="step"><span class="p">PHASE 2</span><span class="t">local baseline<br>multi-eval</span></div><span class="arrow-r">›</span>
+    <div class="step"><span class="p">PHASE 3</span><span class="t">deploy +<br>traffic + eval</span></div><span class="arrow-r">›</span>
+    <div class="step"><span class="p">PHASE 4</span><span class="t">export bad<br>traces</span></div><span class="arrow-r">›</span>
+    <div class="step"><span class="p">PHASE 5</span><span class="t">candidates →<br>A/B → gates</span></div><span class="arrow-r">›</span>
+    <div class="step"><span class="p">PHASE 6</span><span class="t">redeploy +<br>held-out</span></div>
+  </div>
+  <div class="output r" style="margin-top:1.2rem">
+    <span><span class="cm"># entry = production traces (Phase 4). exit = one of four decisions.</span></span>
+    <span><span class="cm"># only a WINNER returns to Phase 6. Across the whole loop: ONLY the prompt may change.</span></span>
+  </div>
+</div></div></section>
+
+<!-- ═══ SLIDE 7 — Data flow / three datasets ═══ -->
+<section class="slide"><div class="slide-content"><div class="terminal wide">
+  <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="title">three lines of defense</span></div>
+  <div class="cmd r"><span class="arrow">&gt;</span> datasets <span class="flag">--how-they-guard-credibility</span></div>
+  <div class="stitle r">Three datasets, three layers</div>
+  <table class="r">
+    <tr><th>Dataset</th><th>Role</th><th>Discipline it enforces</th></tr>
+    <tr><td>control</td><td>tuned against, viewed repeatedly</td><td>the working set</td></tr>
+    <tr><td>holdout</td><td>seen once, in Step 10 only</td><td>catches overfitting</td></tr>
+    <tr><td>verify</td><td>never enters the pool</td><td>final clean check (Phase 6)</td></tr>
+  </table>
+  <p class="note r"># Split = blake2b(scenario_id) → a PURE function. Re-running gives the identical split. A random split could be re-rolled until a candidate passes — and the report would look normal.</p>
+</div></div></section>
+
+<!-- ═══ SLIDE 8 — Result spoiler ═══ -->
+<section class="slide"><div class="slide-content"><div class="terminal">
+  <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="title">spoiler</span></div>
+  <div class="cmd r"><span class="arrow">&gt;</span> tail <span class="flag">-n1 decision.json</span></div>
+  <p class="big r">verdict: NO_CHANGE</p>
+  <div class="output r" style="margin-top:.8rem;font-size:var(--body-size)">
+    <span><span class="cm"># 4 prompt candidates · 486 paired-replay cells · no credible improvement</span></span>
+    <span>— c2 looked like a winner on control <span class="ok">(quality +0.0348, CI all-positive)</span></span>
+    <span>— the held-out set exposed it as <span class="bad">overfitting</span> (quality → ~0, PolicyGrounding −0.13)</span>
+    <span>— next step needs a mechanism change, out of prompt-only scope</span>
+  </div>
+  <p class="sub r" style="margin-top:1rem">This is not a failed demo. <span class="emph">Being able to reject a fake optimization is what lets auto-optimization near production.</span></p>
+</div></div></section>
+
+<!-- ═══ SLIDE 9 — Omni 16 tools ═══ -->
+<section class="slide"><div class="slide-content"><div class="terminal wide">
+  <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="title">CloudWatch Omni — 16 MCP tools</span></div>
+  <div class="cmd r"><span class="arrow">&gt;</span> omni <span class="flag">--list-tools</span> <span class="cm"># green = deeply used · yellow = used via boto3 fallback · dim = n/a</span></div>
+  <div class="chips r">
+    <div class="chip used"><span class="nm">check_credentials</span><span class="role">creds doctor</span></div>
+    <div class="chip used"><span class="nm">configure_omni</span><span class="role">project wiring</span></div>
+    <div class="chip used"><span class="nm">setup_skills</span><span class="role">install skill</span></div>
+    <div class="chip used"><span class="nm">manage_local_collector</span><span class="role">OTLP collector</span></div>
+    <div class="chip used"><span class="nm">local_server</span><span class="role">dev server</span></div>
+    <div class="chip used"><span class="nm">manage_test_agent</span><span class="role">invoke + ping</span></div>
+    <div class="chip used"><span class="nm">search_local_telemetry</span><span class="role">find traces</span></div>
+    <div class="chip used"><span class="nm">manage_datasets</span><span class="role">dataset + versions</span></div>
+    <div class="chip used"><span class="nm">manage_evaluations</span><span class="role">score + custom judge</span></div>
+    <div class="chip alt"><span class="nm">discover_agent_traces_metadata</span><span class="role">cloud cols (R8)</span></div>
+    <div class="chip alt"><span class="nm">search_agent_traces</span><span class="role">cloud SQL → boto3</span></div>
+    <div class="chip alt"><span class="nm">manage_annotations</span><span class="role">annotate → file</span></div>
+    <div class="chip off"><span class="nm">get_invocation_graph</span><span class="role">viz</span></div>
+    <div class="chip off"><span class="nm">get_context</span><span class="role">IDE</span></div>
+    <div class="chip off"><span class="nm">notify_ui</span><span class="role">IDE</span></div>
+    <div class="chip off"><span class="nm">show_credentials_dialog</span><span class="role">IDE</span></div>
+  </div>
+  <p class="note r"># 9 deeply used. The 3 cloud tools were blocked by a local region/DNS issue (R8) — read the same results straight from CloudWatch Logs via boto3. Equivalent, and CI-friendly.</p>
+</div></div></section>
+
+<!-- ═══ SLIDE 10 — Managed evaluators ═══ -->
+<section class="slide"><div class="slide-content"><div class="terminal wide">
+  <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="title">evaluators</span></div>
+  <div class="cmd r"><span class="arrow">&gt;</span> omni <span class="flag">--list-evaluators</span></div>
+  <table class="r">
+    <tr><th>Level</th><th>Evaluators (20+ managed)</th></tr>
+    <tr><td>TRACE</td><td>Correctness · Faithfulness · Helpfulness · Coherence · InstructionFollowing · Refusal · Harmfulness · Stereotyping …</td></tr>
+    <tr><td>TOOL_CALL</td><td>ToolSelectionAccuracy · ToolParameterAccuracy · SkillSelectionAccuracy …</td></tr>
+    <tr><td>SESSION</td><td>GoalSuccessRate · TrajectoryExact/InOrder/AnyOrderMatch</td></tr>
+    <tr><td>custom</td><td><span class="ok">PolicyGrounding</span> — LLM-as-judge (own instructions + rating scale + model)</td></tr>
+  </table>
+  <p class="note r"># Why build PolicyGrounding: Correctness only checks the final number; InstructionFollowing only checks prompt-adherence — but v1's prompt never told it to check policy. The custom judge asks the orthogonal question: <span class="emph">are the policy numbers from a tool return, or invented?</span></p>
+</div></div></section>
+
+<!-- ═══ SLIDE 11 — Declarative CDK ═══ -->
+<section class="slide"><div class="slide-content"><div class="terminal wide">
+  <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="title">infra as code</span></div>
+  <div class="cmd r"><span class="arrow">&gt;</span> cdk <span class="flag">deploy</span> <span class="cm"># the whole eval pipeline, declarative</span></div>
+  <div class="output r" style="font-size:var(--body-size);line-height:1.9">
+    <span><span class="kw">AWS::BedrockAgentCore::</span><span class="fn">Runtime</span> <span class="cm"># the agent</span></span>
+    <span><span class="kw">AWS::BedrockAgentCore::</span><span class="fn">Evaluator</span> <span class="cm"># custom PolicyGrounding (cloud)</span></span>
+    <span><span class="kw">AWS::BedrockAgentCore::</span><span class="fn">OnlineEvaluationConfig</span> <span class="cm"># 8 evaluators × 100% sampling</span></span>
+    <span><span class="kw">AWS::Logs::</span><span class="fn">DeliverySource/Destination/Delivery</span> <span class="cm"># trace pipeline</span></span>
+  </div>
+  <p class="note r"># One line `tracingEnabled: true` buys the whole trace-delivery pipeline. Change prompt → asset hash changes → runtime new version → endpoint follows. Custom evaluator + continuous eval ship WITH the agent — no console clicking.</p>
+</div></div></section>
+
+<!-- ═══ SLIDE 12 — 11-step SOP ═══ -->
+<section class="slide"><div class="slide-content"><div class="terminal wide">
+  <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="title">omni-self-evolution — SOP</span></div>
+  <div class="cmd r"><span class="arrow">&gt;</span> cat <span class="flag">SKILL.md</span> <span class="cm"># execute → validate → advance</span></div>
+  <div class="two">
+    <div class="output r" style="font-size:var(--small-size);line-height:1.95">
+      <span><span class="num">1</span> preflight <span class="cm">(4 hard prereqs)</span></span>
+      <span><span class="num">2</span> freeze baseline <span class="cm">(hash/model/tools/SHA)</span></span>
+      <span><span class="num">3</span> harvest traces <span class="cm">(read-only)</span></span>
+      <span><span class="num">4</span> freeze evaluator set + semantics</span>
+      <span><span class="num">5</span> score baseline + name failure modes</span>
+      <span><span class="num">6</span> build eligible set + split</span>
+    </div>
+    <div class="output r" style="font-size:var(--small-size);line-height:1.95">
+      <span><span class="num">7</span> generate prompt-only candidates</span>
+      <span><span class="num">8</span> paired replay on control</span>
+      <span><span class="num">9</span> statistical gates <span class="cm">(6 gates)</span></span>
+      <span><span class="num">10</span> confirm winner on holdout</span>
+      <span><span class="num">11</span> decide + write back locally</span>
+      <span class="cm">WINNER / NO_CHANGE / NO_DECISION / ROLLED_BACK</span>
+    </div>
+  </div>
+</div></div></section>
+
+<!-- ═══ SLIDE 13 — Steps 1-4 ═══ -->
+<section class="slide"><div class="slide-content"><div class="terminal wide">
+  <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="title">steps 1–4 — nail the foundation</span></div>
+  <div class="cmd r"><span class="arrow">&gt;</span> steps <span class="flag">1..4</span></div>
+  <ul class="flist r">
+    <li><span class="sym">1</span><span><span class="emph">Preflight</span> — 4 prereqs, any miss = hard stop: creds · prompts.json model actually live · OMNI_PROMPTS_OVERRIDE works · spans carry prompt version</span></li>
+    <li><span class="sym">2</span><span><span class="emph">Freeze baseline</span> — manifest: prompt version + cross-process-stable hash (blake2b, not built-in hash()) + model + tools + code SHA</span></li>
+    <li><span class="sym">3</span><span><span class="emph">Harvest</span> — pull prod traces local. Read-only is a hard invariant: never write/modify/delete a prod resource</span></li>
+    <li><span class="sym">4</span><span><span class="emph">Freeze evaluators</span> — lock scoring semantics BEFORE first replay. Caught here: Helpfulness real range is [0,6] not [0,1] → wrong range would clamp the whole dimension</span></li>
+  </ul>
+</div></div></section>
+
+<!-- ═══ SLIDE 14 — Steps 5-6 ═══ -->
+<section class="slide"><div class="slide-content"><div class="terminal wide">
+  <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="title">steps 5–6 — find the disease, split the data</span></div>
+  <div class="cmd r"><span class="arrow">&gt;</span> steps <span class="flag">5..6</span></div>
+  <div class="stitle r"><span class="n">5</span>Failure modes (three independent signals agree)</div>
+  <table class="r">
+    <tr><th>failure mode</th><th>affected</th><th>agreement</th></tr>
+    <tr><td>low_Helpfulness</td><td>31 / 31</td><td>local 0% &amp; cloud 0% pass rate</td></tr>
+    <tr><td>low_Correctness</td><td>8</td><td>—</td></tr>
+    <tr><td>low_GoalSuccessRate</td><td>7</td><td>—</td></tr>
+  </table>
+  <p class="note r"><span class="emph">Step 6</span> gate: eligible ≥12 · control ≥5 · holdout ≥5. First run hit holdout=3 → <span class="warn">NO_DECISION</span>. Correct fix: never lower the gate, never re-split — add real traffic (a bigger scenario pool, since re-sending the same dataset keeps the split identical).</p>
+</div></div></section>
+
+<!-- ═══ SLIDE 15 — Step 7 candidates ═══ -->
+<section class="slide"><div class="slide-content"><div class="terminal wide">
+  <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="title">step 7 — one change each</span></div>
+  <div class="cmd r"><span class="arrow">&gt;</span> gen-candidates <span class="flag">--prompt-only</span></div>
+  <table class="r">
+    <tr><th>candidate</th><th>targets</th><th>mechanism</th></tr>
+    <tr><td>c1-explicit-constraints</td><td>self-contradiction + no alternative</td><td>only ADD constraints</td></tr>
+    <tr><td>c2-restructured-procedure</td><td>same as c1</td><td>RESTRUCTURE into 4-step procedure</td></tr>
+    <tr><td>c3-arithmetic-rules</td><td>coupon proration errors</td><td>add arithmetic rules only</td></tr>
+  </table>
+  <div class="output r" style="margin-top:.8rem">
+    <span><span class="cm"># each candidate = full copy of baseline, ONLY system prompt content changes (machine-verified).</span></span>
+    <span><span class="cm"># c1 vs c2 attack the SAME failure mode — "add" vs "restructure" — on purpose, to compare.</span></span>
+    <span><span class="cm"># no order IDs / expected amounts in a prompt — that memorizes answers, won't generalize.</span></span>
+  </div>
+</div></div></section>
+
+<!-- ═══ SLIDE 16 — Step 8 paired replay ═══ -->
+<section class="slide"><div class="slide-content"><div class="terminal wide">
+  <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="title">step 8 — paired replay (must be a script)</span></div>
+  <div class="cmd r"><span class="arrow">&gt;</span> replay <span class="flag">--variants 4 --examples 25 --reps 3</span> <span class="cm"># = 300 cells</span></div>
+  <ul class="flist r">
+    <li><span class="sym">$</span><span><span class="emph">baseline re-runs live</span> — never reuse historical scores (different traffic/time isn't paired)</span></li>
+    <li><span class="sym">$</span><span><span class="emph">variant switches only via OMNI_PROMPTS_OVERRIDE</span> — restart dev server each time (env is process-level)</span></li>
+    <li><span class="sym">$</span><span><span class="emph">verify prompt version on every trace</span> — mismatch → discard the cell</span></li>
+  </ul>
+  <p class="note r"># Why not let the agent fire these calls? It's deterministic bookkeeping — a dropped cell doesn't error, it just quietly shifts an arm's mean. The version check literally saved this run: one whole arm (56 cells) was silently mislabeled `v1-draft` until it caught it.</p>
+</div></div></section>
+
+<!-- ═══ SLIDE 17 — Step 9 six gates ═══ -->
+<section class="slide"><div class="slide-content"><div class="terminal wide">
+  <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="title">step 9 — six statistical gates</span></div>
+  <div class="cmd r"><span class="arrow">&gt;</span> gates <span class="flag">--all-must-pass</span></div>
+  <table class="r">
+    <tr><th>gate</th><th>threshold</th><th>why</th></tr>
+    <tr><td>mean quality delta</td><td>≥ +0.03</td><td>below = within judge run-to-run noise (~0.02)</td></tr>
+    <tr><td>paired bootstrap CI</td><td>95%, lower ≥ 0</td><td>resample examples → generalization, not "well-measured"</td></tr>
+    <tr><td>per-evaluator regression</td><td>each ≤ 0.02</td><td>block "buy the average by trading one dimension"</td></tr>
+    <tr><td>latency regression</td><td>≤ 10%</td><td>a prompt that wins by reasoning longer has a hidden cost</td></tr>
+    <tr><td>token regression</td><td>≤ 10%</td><td>same, on the bill</td></tr>
+    <tr><td>safety</td><td>zero new failures</td><td>hard gate, not tradeable</td></tr>
+  </table>
+</div></div></section>
+
+<!-- ═══ SLIDE 18 — Step 9 result: near-miss ═══ -->
+<section class="slide"><div class="slide-content"><div class="terminal wide">
+  <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="title">step 9 result — the near-miss</span></div>
+  <div class="cmd r"><span class="arrow">&gt;</span> cat <span class="flag">gates-control.json</span></div>
+  <table class="r">
+    <tr><th>candidate</th><th>Δ quality</th><th>95% CI</th><th>failed gate</th></tr>
+    <tr><td>c1</td><td>+0.0220</td><td>[−0.001, +0.046]</td><td>quality &lt;0.03; CI lower &lt;0</td></tr>
+    <tr><td>c2</td><td><span class="ok">+0.0348 ✓</span></td><td><span class="ok">[+0.015, +0.056] ✓</span></td><td><span class="bad">latency only: 11.11% &gt; 10%</span></td></tr>
+    <tr><td>c3</td><td>+0.0088</td><td>[−0.010, +0.030]</td><td>quality; CI; latency; token</td></tr>
+  </table>
+  <p class="note r"># Temptation: nudge the latency gate 10→12% and c2 passes. Discipline: <span class="warn">a threshold chosen to admit the candidate in front of you is not a threshold.</span> So we changed the candidate (terse c4) — which crushed the quality gain (+0.0348 → −0.0013). Quality and latency don't separate along "wording."</p>
+</div></div></section>
+
+<!-- ═══ SLIDE 19 — Step 10 holdout (THE slide) ═══ -->
+<section class="slide"><div class="slide-content"><div class="terminal wide">
+  <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="title">step 10 — held-out verdict</span></div>
+  <div class="cmd r"><span class="arrow">&gt;</span> cat <span class="flag">gates-holdout.json</span> <span class="cm"># the single most important page</span></div>
+  <div class="output r" style="font-size:var(--body-size);line-height:2">
+    <span>c2 on <span class="emph">control</span>: &nbsp;Δ <span class="ok">+0.0348</span> &nbsp; CI <span class="ok">[+0.015, +0.056]</span> &nbsp;<span class="cm">← looked real</span></span>
+    <span>c2 on <span class="emph">holdout</span>: &nbsp;Δ <span class="bad">−0.0018</span> &nbsp; CI <span class="bad">[−0.054, +0.058]</span> &nbsp;<span class="cm">← gain gone</span></span>
+    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PolicyGrounding <span class="bad">−0.1296</span> &nbsp;<span class="cm">← a dimension control never exposed</span></span>
+  </div>
+  <p class="sub r" style="margin-top:.9rem">If we'd relaxed the latency gate and shipped c2, we'd have deployed a <span class="emph">worse</span> prompt — with control showing all green. <span class="emph">The held-out set, not any threshold, stopped it.</span></p>
+</div></div></section>
+
+<!-- ═══ SLIDE 20 — Step 11 four decisions ═══ -->
+<section class="slide"><div class="slide-content"><div class="terminal wide">
+  <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="title">step 11 — four decisions, must distinguish</span></div>
+  <div class="cmd r"><span class="arrow">&gt;</span> decide</div>
+  <table class="r">
+    <tr><th>decision</th><th>meaning</th><th>this run</th></tr>
+    <tr><td>WINNER</td><td>passed all gates + holdout confirm</td><td>—</td></tr>
+    <tr><td>NO_CHANGE</td><td>measured, nobody won. baseline stands</td><td><span class="ok">✓ this run</span></td></tr>
+    <tr><td>NO_DECISION</td><td>couldn't measure (too few samples / no traces)</td><td>Phase 4 hit it once</td></tr>
+    <tr><td>ROLLED_BACK_LOCAL</td><td>local write-back then reverted</td><td>—</td></tr>
+  </table>
+  <p class="note r"># NO_CHANGE ≠ NO_DECISION — "measured, no winner" vs "couldn't measure." Conflating them lets an unmeasured run read as a validated baseline. This NO_CHANGE is a <span class="emph">successful</span> run: it proved, reproducibly, these prompt-only hypotheses don't beat baseline.</p>
+</div></div></section>
+
+<!-- ═══ SLIDE 21 — in vs on the loop (defs) ═══ -->
+<section class="slide"><div class="slide-content"><div class="terminal wide">
+  <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="title">human-in vs human-on the loop</span></div>
+  <div class="cmd r"><span class="arrow">&gt;</span> discuss <span class="flag">--governance</span></div>
+  <div class="two">
+    <div class="card r"><div class="ic"><i data-lucide="user-cog"></i></div><h3>Human IN the loop</h3><p>Inside every step; the system waits for a nod. Co-pilot, hands on the wheel.<br><span class="cm">+ every decision endorsed &nbsp; − slow, doesn't scale</span></p></div>
+    <div class="card r"><div class="ic"><i data-lucide="monitor-dot"></i></div><h3>Human ON the loop</h3><p>Outside the loop; the system runs, human supervises outcomes. On-call watching dashboards.<br><span class="cm">+ scalable, fast &nbsp; − system may auto-do wrong things</span></p></div>
+  </div>
+  <p class="sub r" style="margin-top:1rem">Not either/or. <span class="emph">Mature automation picks a different mode per stage.</span></p>
+</div></div></section>
+
+<!-- ═══ SLIDE 22 — the actual split ═══ -->
+<section class="slide"><div class="slide-content"><div class="terminal wide">
+  <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="title">where the line sits in this demo</span></div>
+  <div class="cmd r"><span class="arrow">&gt;</span> loop <span class="flag">--who-decides-what</span></div>
+  <div class="card r" style="border-color:var(--green-mid)">
+    <h3 style="color:var(--green)">HUMAN ON THE LOOP — runs unattended</h3>
+    <p>Step 3 harvest → 5 failure modes → 7 candidates → 8 replay → 9 gates → 10 holdout. Produces auditable evidence and a recommendation. No human in any step.</p>
+  </div>
+  <div class="card r" style="border-color:var(--yellow);margin-top:.7rem">
+    <h3 style="color:var(--yellow)">HUMAN IN THE LOOP — must nod</h3>
+    <p>Whether to ship a WINNER (Invariant 3: the SOP never deploys itself) · whether to waive a gate (--waive-gate, reason required).</p>
+  </div>
+  <p class="note r"># The analysis is on-the-loop; the exit (ship, waive) is in-the-loop — those decisions have a prod blast radius the SOP can't assess.</p>
+</div></div></section>
+
+<!-- ═══ SLIDE 23 — three mechanisms ═══ -->
+<section class="slide"><div class="slide-content"><div class="terminal wide">
+  <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="title">three mechanisms enforce the line</span></div>
+  <div class="cmd r"><span class="arrow">&gt;</span> how <span class="flag">--enforced</span></div>
+  <div class="cards">
+    <div class="card r"><div class="ic"><i data-lucide="lock"></i></div><h3>Read-only + no deploy</h3><p>Never writes a prod resource, never cdk deploy / publish. It emits a recommendation, not an action.</p></div>
+    <div class="card r"><div class="ic"><i data-lucide="file-check"></i></div><h3>Auditable waiver</h3><p>--waive-gate: threshold unchanged, gate still ❌, reason logged to JSON, verdict WINNER_BY_HUMAN_WAIVER. c2's waived latency didn't wash out its holdout quality fail.</p></div>
+    <div class="card r"><div class="ic"><i data-lucide="shield-check"></i></div><h3>Holdout: auto, not waivable</h3><p>Overfitting detection is NOT left to human judgement — people believe the candidate they want. Split by stable hash before candidates exist.</p></div>
+  </div>
+</div></div></section>
+
+<!-- ═══ SLIDE 24 — closing ═══ -->
+<section class="slide"><div class="slide-content"><div class="terminal">
+  <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="title">what this really proves</span></div>
+  <div class="cmd r"><span class="arrow">&gt;</span> summary</div>
+  <div class="output r" style="font-size:var(--body-size);line-height:1.9">
+    <span><span class="cm"># NOT "an AI can auto-optimize a prompt" (too easy, not credible)</span></span>
+    <span>What a self-optimizing loop that can <span class="emph">reject a fake optimization</span> looks like:</span>
+    <span>&nbsp;&nbsp;<span class="ok">›</span> read-only, no deploy, prompt-only</span>
+    <span>&nbsp;&nbsp;<span class="ok">›</span> every number reproducible, every gate justified, every waiver logged</span>
+    <span>&nbsp;&nbsp;<span class="ok">›</span> holdout auto-blocks overfitting; humans make the value calls</span>
+  </div>
+  <p class="big r" style="margin-top:1rem;font-size:clamp(1.3rem,3.8vw,2.4rem)">Reject-capable is ship-ready.<span class="cursor"></span></p>
+  <p class="note r"># Let humans make value judgements; let the machine guard against self-deception.</p>
+</div></div></section>
+
+<script>
+(function(){
+  'use strict';
+  const slides = document.querySelectorAll('.slide');
+  const bar = document.getElementById('progress');
+  const dotsNav = document.getElementById('dots');
+  const pageCur = document.querySelector('.page-number .cur');
+  const total = slides.length;
+  let current = 0, isNav = false;
+
+  // build nav dots
+  slides.forEach(function(_,i){
+    const a = document.createElement('a');
+    a.setAttribute('aria-label','Slide '+(i+1));
+    if(i===0) a.classList.add('active');
+    a.addEventListener('click',function(){goTo(i)});
+    dotsNav.appendChild(a);
+  });
+  const dots = dotsNav.querySelectorAll('a');
+
+  // reveal + active slide via one observer
+  const obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(e.isIntersecting){
+        e.target.classList.add('visible');
+        const idx = Array.prototype.indexOf.call(slides, e.target);
+        if(idx!==-1) setCurrent(idx);
+      }
+    });
+  },{threshold:0.55});
+  slides.forEach(function(s){obs.observe(s)});
+
+  function setCurrent(idx){
+    current = idx;
+    bar.style.width = (((idx+1)/total)*100)+'%';
+    dots.forEach(function(d,i){d.classList.toggle('active',i===idx)});
+    pageCur.textContent = String(idx+1).padStart(2,'0');
+  }
+  function goTo(idx){
+    if(idx<0||idx>=total||isNav) return;
+    isNav = true;
+    slides[idx].scrollIntoView({behavior:'smooth'});
+    setTimeout(function(){isNav=false},600);
+  }
+
+  document.addEventListener('keydown',function(e){
+    if(e.key==='ArrowDown'||e.key==='PageDown'||e.key===' '){e.preventDefault();goTo(current+1);}
+    else if(e.key==='ArrowUp'||e.key==='PageUp'){e.preventDefault();goTo(current-1);}
+    else if(e.key==='Home'){e.preventDefault();goTo(0);}
+    else if(e.key==='End'){e.preventDefault();goTo(total-1);}
+  });
+  var wt=0;
+  document.addEventListener('wheel',function(e){
+    var now=Date.now();
+    if(now-wt<800||Math.abs(e.deltaY)<30) return;
+    wt=now; goTo(current + (e.deltaY>0?1:-1));
+  },{passive:true});
+  var ty=0;
+  document.addEventListener('touchstart',function(e){ty=e.touches[0].clientY},{passive:true});
+  document.addEventListener('touchend',function(e){
+    var d=ty-e.changedTouches[0].clientY;
+    if(Math.abs(d)>50) goTo(current+(d>0?1:-1));
+  },{passive:true});
+
+  setCurrent(0);
+  if(typeof lucide!=='undefined') lucide.createIcons();
+})();
+</script>
+</body>
+</html>
