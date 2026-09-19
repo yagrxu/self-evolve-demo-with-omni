@@ -1,17 +1,12 @@
 {
   "_doc": "自定义 LLM-as-judge evaluator：PolicyGrounding。这份 JSON 是唯一真相来源 —— Phase 2 的本地 evaluator（manage_evaluations create_evaluator）和 Phase 3 的云端 evaluator（CDK 的 agentcore.Evaluator）都读它。两边必须完全一致，否则本地 A/B 的结论无法迁移到云上验证。",
-
   "_why_this_evaluator": "内置 evaluator 抓不到本 Demo 的核心病根。Correctness 只能判断最终数字对不对，InstructionFollowing 只看有没有遵循 system prompt —— 但 v1 的 system prompt 本身就没要求查政策，所以它「遵循得很好」却答得很错。PolicyGrounding 直接问一个正交的问题：这个回答里的政策数值，到底是从 get_refund_policy 的返回里来的，还是模型编的？",
-
   "name": "PolicyGrounding",
   "level": "TRACE",
   "description": "判定 agent 回答中的退换货政策数值（退货窗口天数、折旧费比例、运费承担方、换新窗口）是否有工具返回的真实政策作为依据，而不是凭常识编造。",
-
   "model_id": "us.anthropic.claude-haiku-4-5-20251001-v1:0",
   "_model_note": "judge 用 Haiku 4.5 控制成本：9 个 evaluator × 55 条 example × 多轮，判官调用量远大于 agent 本身。判定任务本身是「比对数值是否一致」，不需要更强的模型。",
-
-  "instructions": "你在评估一个电商售后客服 agent 的回答是否**有政策依据 (grounded)**。\n\n## 输入\n\n可用工具：\n{available_tools}\n\n工具调用与返回：\n{tool_turn}\n\n上下文：\n{context}\n\nagent 的回答：\n{assistant_turn}\n\n## 你要判断的唯一问题\n\nagent 回答里出现的**每一个政策性数值或结论**，是否都能在工具返回中找到依据？\n\n政策性数值/结论包括（不限于）：\n- 退货窗口天数（如「14 天」「30 天」）\n- 折旧费/手续费比例（如「10%」「5%」）\n- 寄回运费由谁承担（买家 / 商家）\n- 超出退货窗口后能否换新、换新窗口多少天\n- 某个类目是否支持无理由退货\n- 破损商品的特殊处理规则\n\n## 关键判定原则\n\n1. **没有调用 `get_refund_policy` 却说出了具体政策数值 = 编造。** 即使这个数值恰好蒙对了，也算编造 —— 因为它不是被工具证实的，只是碰巧。这是本评估最重要的一条。\n2. **调了工具但引用的数值与工具返回不一致 = 矛盾**，比编造更严重。\n3. 只说「具体政策请咨询客服」这类回避性表述，不算编造，但也谈不上有依据。\n4. **不要评价金额算得对不对**（那是 Correctness 的职责），只评价政策依据。\n5. **不要评价语气是否友好**（那是 Helpfulness 的职责）。\n\n## 打分\n\n按下面的 0-3 分制给分，并在 reasoning 里明确写出：agent 声称的政策数值是什么、工具返回的政策数值是什么、两者是否一致、是否调用了政策工具。",
-
+  "instructions": "你在评估一个电商售后客服 agent 的回答是否**有政策依据 (grounded)**。\n\n## 输入\n\n上下文 —— 这是本次调用的完整 trace，**工具调用与其返回值都在里面**：\n{context}\n\nagent 的回答：\n{assistant_turn}\n\n## 你要判断的唯一问题\n\nagent 回答里出现的**每一个政策性数值或结论**，是否都能在工具返回中找到依据？\n\n政策性数值/结论包括（不限于）：\n- 退货窗口天数（如「14 天」「30 天」）\n- 折旧费/手续费比例（如「10%」「5%」）\n- 寄回运费由谁承担（买家 / 商家）\n- 超出退货窗口后能否换新、换新窗口多少天\n- 某个类目是否支持无理由退货\n- 破损商品的特殊处理规则\n\n## 关键判定原则\n\n1. **上下文里找不到任何工具调用记录时**，你仍按「未获证实」评分，但必须在 reasoning 里写明「上下文中未见工具调用记录」。这样一旦是埋点缺失而非 agent 真的没调用，从 reasoning 里能看出来 —— 静默给低分会把埋点问题伪装成模型问题。\n2. **没有调用 `get_refund_policy` 却说出了具体政策数值 = 编造。** 即使这个数值恰好蒙对了，也算编造 —— 因为它不是被工具证实的，只是碰巧。这是本评估最重要的一条。\n3. **调了工具但引用的数值与工具返回不一致 = 矛盾**，比编造更严重。\n4. 只说「具体政策请咨询客服」这类回避性表述，不算编造，但也谈不上有依据。\n5. **不要评价金额算得对不对**（那是 Correctness 的职责），只评价政策依据。\n6. **不要评价语气是否友好**（那是 Helpfulness 的职责）。\n\n## 打分\n\n按下面的 0-3 分制给分，并在 reasoning 里明确写出：agent 声称的政策数值是什么、工具返回的政策数值是什么、两者是否一致、是否调用了政策工具。",
   "rating_scale": {
     "numerical": [
       {
@@ -36,7 +31,6 @@
       }
     ]
   },
-
   "_scoring_semantics": {
     "direction": "HIGHER_IS_BETTER",
     "min": 0,
@@ -44,5 +38,6 @@
     "pass_threshold": 2,
     "canonicalization": "(score - 0) / (3 - 0)",
     "_note": "omni-self-evolution skill 要求在 replay 之前就冻结 direction / 值域 / 及格线，且此后不得修改（Step 1.6 与 Step 9.6）。这三个字段就是那份冻结声明。"
-  }
+  },
+  "_placeholder_note": "TRACE 级 evaluator 只允许 context / assistant_turn / expected_response / system_instructions 四个占位符。available_tools 和 tool_turn 是 TOOL_CALL 级的，用在 TRACE 级会被 create_evaluator 直接拒绝（见 BUILD-LOG 2.1）。工具证据从 {context} 取 —— manage_evaluations 的 run 动作在传 traceIds 时会把 spans / tool calls / retrieved contexts 打包进 context。刻意不使用 expected_response：本 evaluator 要与 Correctness 正交，喂参考答案会让判官漂移去评金额对错。"
 }

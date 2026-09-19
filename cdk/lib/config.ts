@@ -3,14 +3,17 @@
  */
 
 /**
- * 显式写死 us-east-1。
+ * 显式写死 us-west-2。
  *
- * 理由（见 docs/BUILD-LOG.md 决策点 R4）：本机 AWS profile 的默认 region 是
- * ap-southeast-1，但 AgentCore runtime、X-Ray→CloudWatchLogs 投递、以及 Omni
- * 云端 trace store 全在 us-east-1。如果依赖 profile 默认值，会静默部署/查询到
- * 一个空 region —— trace 一条都查不到，而且极难 debug。
+ * 两条理由（见 docs/BUILD-LOG.md 决策点 R4 及其修正 R4'）：
+ *
+ * 1. 不依赖 profile 默认值。本机 AWS profile 的默认 region 是 ap-southeast-1，
+ *    若依赖它会静默部署/查询到一个空 region —— trace 一条都查不到，且极难 debug。
+ * 2. 必须与 Omni Space 的 region 一致。Omni Space 在 us-west-2，云端 trace 查询
+ *    （Phase 3/4 的 `search_agent_traces`）走的是它。runtime 的 trace 落在别的
+ *    region 就查不到 —— 同样是静默返回 0 行的失败模式。
  */
-export const REGION = 'us-east-1';
+export const REGION = 'us-west-2';
 
 /**
  * 所有资源统一前缀。

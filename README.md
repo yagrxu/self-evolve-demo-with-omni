@@ -4,7 +4,7 @@
 本地 A/B 调优 → 重新部署 → held-out 数据集验证提升**。
 
 场景是电商订单售后客服。部署走 CDK + AgentCore **Direct Code Deploy**（S3 zip，无需 Docker）。
-Region 固定 **us-east-1**，AWS profile **default**。
+Region 固定 **us-west-2**（与 Omni Space 同 region —— 云端 trace 查询走它），AWS profile **default**。
 
 ---
 
@@ -12,10 +12,17 @@ Region 固定 **us-east-1**，AWS profile **default**。
 
 | 文档 | 内容 |
 |---|---|
+| **[.claude/skills/omni/self-evolution/SKILL.md](.claude/skills/omni/self-evolution/SKILL.md)** | **主产出**：`omni-self-evolution` 方法论 SOP（11 步 + 6 条硬不变量 + 6 道统计门）。同一份也放在 `.kiro/skills/omni-self-evolution/` |
+| **[docs/STORYLINE.md](docs/STORYLINE.md)** | 演示故事线（24 张 slide）：技术背景、循环轮廓、Omni 16 工具全景、循环详解、human-in/on-the-loop |
+| **[docs/RUNBOOK.md](docs/RUNBOOK.md)** | 调用流程手册：只记录跑通的调用 + 每个参数必须这样做的理由 |
+| **[docs/BUILD-LOG.md](docs/BUILD-LOG.md)** | **施工日志**：每一步的命令、原始输出、决策；20+ 个实测踩坑（约一半是不报错的静默失败） |
 | **[docs/PLAN.md](docs/PLAN.md)** | 设计与计划：MCP/Skill/AWS 验证结论、场景设计、6 个 Phase、风险表 |
-| **[docs/BUILD-LOG.md](docs/BUILD-LOG.md)** | **施工日志**：每一步执行了什么命令、原始输出、由此得出的决策；踩过的坑与修法 |
 
-**想知道"为什么这样做"，看 BUILD-LOG；想知道"整体怎么设计的"，看 PLAN。**
+**想直接看方法论，读 SKILL.md；想讲给别人听，读 STORYLINE；想复现，读 RUNBOOK；想知道"为什么这样做"，读 BUILD-LOG。**
+
+> **本次运行结局：`NO_CHANGE`。** 4 个 prompt 候选、486 格 paired replay，没有一个确立对 baseline
+> 的可泛化提升 —— 其中 c2 在 control 上看似胜出（质量 +0.0348、CI 全正），被 held-out 揭穿为过拟合
+> （holdout 上质量塌回 ~0、PolicyGrounding 回退 0.13）。**能拒绝一个假的优化，正是这套方法论的价值所在。**
 
 ---
 
@@ -62,7 +69,7 @@ uv pip install --python .venv/bin/python -r agent/requirements.txt
 
 `default` profile 即可。已确认就绪、**无需再操作**的前置项：
 
-- `aws xray get-trace-segment-destination --region us-east-1` → `CloudWatchLogs / ACTIVE`
+- `aws xray get-trace-segment-destination --region us-west-2` → `CloudWatchLogs / ACTIVE`
 - X-Ray indexing rule → 100% 采样
 
 ---

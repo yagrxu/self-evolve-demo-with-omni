@@ -54,10 +54,25 @@ python3 -m pip install \
   -r "${SRC}/requirements.txt"
 
 echo "==> 精简包体"
-# 这些目录只影响体积，不影响运行；zip 越小上传和冷启动越快。
+# __pycache__ 与 tests 只影响体积，删掉安全。
 find "${BUILD}" -type d -name "__pycache__" -prune -exec rm -rf {} + 2>/dev/null || true
-find "${BUILD}" -type d -name "*.dist-info" -prune -exec rm -rf {} + 2>/dev/null || true
 find "${BUILD}" -type d -name "tests" -prune -exec rm -rf {} + 2>/dev/null || true
+
+# ⚠️ **绝对不能删 *.dist-info** —— 这里原来删了，是个会静默毁掉整条链路的 bug。
+#
+# `opentelemetry-instrument` 靠 **entry points** 发现要加载什么，而 entry points
+# 存在 `*.dist-info/entry_points.txt` 里。实测（BUILD-LOG 3.1）：
+#
+#   剥掉 dist-info 后，以 bundle 为唯一 sys.path 时
+#     opentelemetry_distro        2 个 → 0 个
+#     opentelemetry_configurator  2 个 → 0 个
+#     opentelemetry_instrumentor 51 个 → 0 个
+#
+# 后果不是启动失败（那样反而好排查），而是 **agent 正常跑、但一条 trace 都不产生**。
+# 云上没有 trace ⇒ Phase 4 无从导出 ⇒ 整个 self-evolution 链路断在最不容易归因的地方。
+#
+# 体积代价：dist-info 只占几 MB，相对 93MB 的包可以忽略。
+echo "    （保留 *.dist-info —— ADOT 的 entry point 发现依赖它，见脚本内注释）"
 
 echo "==> 冒烟检查"
 for f in agent.py tools.py prompt_loader.py prompts.json fixtures/orders.json fixtures/policies.json; do
@@ -71,6 +86,22 @@ done
 [[ -f "${BUILD}/bin/opentelemetry-instrument" ]] \
   || echo "  ⚠️  bin/opentelemetry-instrument 不在包内 —— 若 runtime 启动失败，" \
           "改用 python -m opentelemetry.instrumentation.auto_instrumentation 作为 entryPoint"
+
+# ADOT 的 entry point 必须真的可发现。**这一条是硬门，不是警告** ——
+# 它为 false 时 agent 会正常启动、正常回答、但一条 trace 都不产生，
+# 而那种失败要到 Phase 4 查不到 trace 时才会暴露，届时极难归因。
+EP_COUNT=$(cd "${BUILD}" && "${PYTHON_BIN:-python3}" -c "
+import sys; sys.path.insert(0, '.')
+from importlib.metadata import entry_points
+print(sum(len(list(entry_points(group=g))) for g in
+          ('opentelemetry_distro','opentelemetry_configurator','opentelemetry_instrumentor')))
+" 2>/dev/null || echo 0)
+if [[ "${EP_COUNT}" -lt 3 ]]; then
+  echo "  ✗ ADOT entry points 只发现 ${EP_COUNT} 个（distro + configurator + instrumentor）。"
+  echo "    几乎肯定是 *.dist-info 被删了 —— 那会让埋点静默失效：agent 照常回答，但零 trace。"
+  exit 1
+fi
+echo "    ✓ ADOT entry points 可发现（${EP_COUNT} 个）"
 
 SIZE=$(du -sh "${BUILD}" | cut -f1)
 COUNT=$(find "${BUILD}" -type f | wc -l | tr -d ' ')

@@ -9,7 +9,10 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .ruff_cache/
-agent/.build/          # pip install --target 产出的 vendored 依赖（cdk synth 需要它存在）
+# pip install --target 产出的 vendored 依赖（97MB，cdk synth 需要它存在于本地）。
+# 注意：gitignore **不支持行尾注释** —— 原来写成 `agent/.build/  # 说明` 时，
+# 整行被当成字面模式，实际什么都没忽略（实测 git check-ignore 不匹配）。
+agent/.build/
 
 # CDK / Node
 node_modules/
@@ -19,3 +22,28 @@ cdk.context.json
 # 运行产物（脚本会重新生成；报告本身入库，原始 dump 不入）
 runs/
 *.raw.jsonl
+.claude/
+.github/
+.cursor/
+.kiro/
+.agents/
+
+# 例外：`omni-self-evolution` SKILL.md 是**本项目的主产出**，必须入库。
+# 上面的 .kiro/ 与 .claude/ 是为了排除各类工具自动装进来的 vendor skill 和本地配置，
+# 但它把我们自己写的那份也一起排掉了 —— 实测 git check-ignore 命中 .gitignore:25。
+# 目录本身要先解除忽略，否则 git 不会进去看文件级的例外。
+!.kiro/
+!.kiro/skills/
+!.kiro/skills/omni-self-evolution/
+!.kiro/skills/omni-self-evolution/**
+.kiro/skills/*
+!.kiro/skills/omni-self-evolution/
+!.claude/
+!.claude/skills/
+!.claude/skills/omni/
+!.claude/skills/omni/self-evolution/
+!.claude/skills/omni/self-evolution/**
+.claude/skills/omni/*
+!.claude/skills/omni/self-evolution/
+.claude/*
+!.claude/skills/

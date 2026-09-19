@@ -53,9 +53,27 @@ def omni(tool: str, args: dict | None = None, *, timeout_s: int = 600) -> dict |
     if not out:
         return {}
     try:
-        return json.loads(out)
+        payload = json.loads(out)
     except json.JSONDecodeError as e:
         raise OmniError(f"{tool} 返回的不是合法 JSON: {out[:500]}", exit_code=EXIT_TOOL_ERROR) from e
+
+    # Omni 的工具会用 exit 0 + `{"error": "..."}` 表示业务失败 —— 不是协议错误，
+    # 所以 returncode 检查抓不到它。必须在这里显式抬成异常。
+    #
+    # 实测（BUILD-LOG 2.1）：`create_evaluator` 因占位符不合法而失败时正是这个形态，
+    # 而调用方把它当成功、把 `None` 当 evaluator id 继续跑，直到几十行后才以一个
+    # 完全无关的 KeyError 崩掉。静默失败在这条链路上代价极高：evaluator 没建成却
+    # 继续评估，会产出一份看起来正常、实际缺了一个维度的基线。
+    # `len(payload) <= 2` 这个判据太窄 —— 实测（BUILD-LOG 5.4）
+    # `invoke_agent` 的失败信封是三个键：{"error", "message", "sessionId"}，
+    # 于是被当成成功返回，一路带到门禁才以「0 个配对样本」暴露。
+    # 改为：只要有 error 键、且没有任何成功载荷的迹象，就抬成异常。
+    if isinstance(payload, dict) and payload.get("error") and not any(
+            k in payload for k in ("content", "results", "traces", "datasets",
+                                   "evaluators", "examples", "evaluatorId")):
+        detail = payload.get("message") or payload["error"]
+        raise OmniError(f"{tool} 返回业务错误: {detail}", exit_code=EXIT_TOOL_ERROR)
+    return payload
 
 
 def require_omni() -> None:
@@ -72,10 +90,25 @@ def require_omni() -> None:
             ) from e
         raise SystemExit(str(e)) from e
 
-    if not (creds.get("can_sign") and creds.get("ready")):
+    # 只有 can_sign 是硬门 —— 它为假说明凭证链根本签不出请求，任何工具都不用试了。
+    if not creds.get("can_sign"):
         raise SystemExit(
             f"AWS 凭证未就绪：{json.dumps(creds, ensure_ascii=False, indent=2)}\n"
             f"云端 evaluator 需要凭证。先跑 `aws sts get-caller-identity` 确认。"
         )
+
     ident = creds.get("caller_identity", {})
     print(f"✓ Omni 可达 | account={ident.get('account')} | source={creds.get('credential_source')}")
+
+    # `ready` 不能当硬门（见 docs/BUILD-LOG.md 决策点 R8）。
+    # 它反映的是 Omni 后端 authorization check 的结果，`auth_status:"transient"` 时
+    # 只表示那一次 check 5xx/超时了 —— 而本地工具（datasets local / test agent invoke /
+    # 本地 evaluator）实测照常可用。把它当硬门会让 Phase 2 因为一个假信号直接 exit。
+    if not creds.get("ready"):
+        print(
+            f"⚠ check_credentials ready=false (auth_status={creds.get('auth_status')})"
+            f" —— 本地工具不受影响，继续。\n"
+            f"  云端 trace 查询（Phase 3/4）需要扩展宿主进程有 AWS_REGION，"
+            f"若报 'Cloud endpoint not configured'，从终端重启 Kiro：\n"
+            f"    AWS_REGION=us-west-2 open -na Kiro --args {REPO}"
+        )

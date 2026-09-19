@@ -5,7 +5,7 @@ Phase 3 用 ``prod_sim``（模拟真实用户），Phase 6 用 ``verify``（held
 
 核心设计：sessionId 里显式编码 scenario_id
 ------------------------------------------
-``omni-self-evolution`` skill 的 Step 8.3 有一条硬性禁令：
+``omni-self-evolution`` SKILL.md 的 Step 6 有一条硬性约束（大意）：
 
   > Do **not** rely on production ``sourceTraceId``, replay trace ID equality,
   > or **positional dataset matching**.
@@ -37,7 +37,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-REGION = "us-east-1"  # 显式：见 docs/BUILD-LOG.md 决策点 R4
+REGION = "us-west-2"  # 显式，且与 Omni Space 同 region：见 docs/BUILD-LOG.md 决策点 R4/R4'
 AGENT_STACK = "selfevolve-demo-agent"
 
 # AgentCore 的 runtimeSessionId 有最小长度要求（33 字符）。
@@ -45,7 +45,7 @@ AGENT_STACK = "selfevolve-demo-agent"
 MIN_SESSION_ID_LEN = 33
 
 
-def resolve_runtime(stack_name: str) -> tuple[str, str]:
+def resolve_runtime(stack_name: str, endpoint: str) -> tuple[str, str]:
     """从 CloudFormation 输出里取 runtime ARN 和 log group。
 
     不硬编码 ARN：Phase 6 重新部署后 runtime 版本会变，读 stack 输出永远是对的。
@@ -64,7 +64,13 @@ def resolve_runtime(stack_name: str) -> tuple[str, str]:
     arn = outputs.get("RuntimeArn")
     if not arn:
         raise SystemExit(f"stack {stack_name} 没有 RuntimeArn 输出，输出项为：{sorted(outputs)}")
-    return arn, outputs.get("ApplicationLogGroup", "")
+    # log group 必须**随 qualifier 走**。stack 输出的 ApplicationLogGroup 指向
+    # `...-DEFAULT`，而我们用 endpoint `v1` 调用时 trace 实际落在 `...-v1`。
+    # 记错了不会报错，只会让后续查 log 的人查一个空 group（实测踩过，见 BUILD-LOG 3.4）。
+    default_lg = outputs.get("ApplicationLogGroup", "")
+    runtime_id = arn.rsplit("/", 1)[-1]
+    log_group = f"/aws/bedrock-agentcore/runtimes/{runtime_id}-{endpoint}" if runtime_id else default_lg
+    return arn, log_group
 
 
 def make_session_id(dataset: str, scenario_id: str, run_id: str) -> str:
@@ -137,7 +143,7 @@ def main() -> int:
 
     import boto3
 
-    runtime_arn, log_group = resolve_runtime(args.stack)
+    runtime_arn, log_group = resolve_runtime(args.stack, args.endpoint)
     print(f"runtime={runtime_arn}\nlog_group={log_group}\n")
 
     client = boto3.client("bedrock-agentcore", region_name=REGION)

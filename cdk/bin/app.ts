@@ -8,8 +8,8 @@ const app = new cdk.App();
 
 /**
  * region 显式写死，account 从环境取（default profile）。
- * 见 docs/BUILD-LOG.md 决策点 R4：本机 profile 默认 region 是 ap-southeast-1，
- * 但 AgentCore / X-Ray 投递 / Omni trace store 全在 us-east-1。
+ * 见 docs/BUILD-LOG.md 决策点 R4/R4'：本机 profile 默认 region 是 ap-southeast-1，
+ * 而 Omni Space 在 us-west-2 —— 云端 trace 查询走它，所以 runtime 必须部在同一个 region。
  */
 const env: cdk.Environment = {
   account: process.env.CDK_DEFAULT_ACCOUNT,

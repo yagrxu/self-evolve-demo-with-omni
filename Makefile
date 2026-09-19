@@ -1,12 +1,12 @@
 # AgentCore Self-Evolution Demo
 #
 # Region 与 profile 一律显式给出，不依赖 shell 环境 ——
-# 本机 profile 默认 region 是 ap-southeast-1，而所有 AgentCore 资源在 us-east-1
-# （见 docs/BUILD-LOG.md 决策点 R4）。
+# 本机 profile 默认 region 是 ap-southeast-1，而 Omni Space 与所有本 demo 的
+# AgentCore 资源都在 us-west-2（见 docs/BUILD-LOG.md 决策点 R4 及修正 R4'）。
 
 SHELL      := /bin/bash
 PY         := .venv/bin/python
-REGION     := us-east-1
+REGION     := us-west-2
 export AWS_REGION := $(REGION)
 export AWS_DEFAULT_REGION := $(REGION)
 

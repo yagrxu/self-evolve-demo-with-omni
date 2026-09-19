@@ -1,6 +1,6 @@
 # AgentCore Self-Evolution Demo — 实施计划
 
-> 场景：电商订单售后客服 · 部署：CDK + AgentCore Direct Code Deploy (S3 zip) · Region: **us-east-1** · Profile: **default**
+> 场景：电商订单售后客服 · 部署：CDK + AgentCore Direct Code Deploy (S3 zip) · Region: **us-west-2**（与 Omni Space 同 region）· Profile: **default**
 
 ---
 
@@ -68,14 +68,14 @@ $ workspace/verify  {workspace: <本项目>}       → ERROR -32001
 | 项 | 结果 |
 |---|---|
 | `sts get-caller-identity` | `arn:aws:iam::613477150601:user/yagrxu`（IAM user，非 role） |
-| profile default region | `ap-southeast-1` → **所有代码显式写 us-east-1，不吃 profile 默认值** |
-| `xray get-trace-segment-destination` (us-east-1) | `CloudWatchLogs` / **ACTIVE** —— 生产可观测性前置条件已满足 |
+| profile default region | `ap-southeast-1` → **所有代码显式写 us-west-2，不吃 profile 默认值**（见 R4'） |
+| `xray get-trace-segment-destination` (us-east-1 / us-west-2) | 两个 region 均 `CloudWatchLogs` / **ACTIVE**，100% 采样 —— 生产可观测性前置条件已满足 |
 | X-Ray indexing rule | Default probabilistic **100%** 采样 |
 | CFN 资源类型 | `AWS::BedrockAgentCore::{Runtime, RuntimeEndpoint, Dataset, Evaluator, OnlineEvaluationConfig}` 全部存在 |
 | `aws-cdk-lib` 2.269.0 | 含 `aws-bedrockagentcore`：L1 `CfnRuntime/CfnRuntimeEndpoint/CfnEvaluator/CfnOnlineEvaluationConfig` + L2 `evaluation/`（`OnlineEvaluationConfig`、`EvaluatorSelector.builtin()`、`BuiltinEvaluator`） |
 | Direct Code Deploy | `AgentRuntimeArtifact.CodeConfiguration` = `{Code:{S3:{Bucket,Prefix}}, Runtime: PYTHON_3_10..3_14\|NODE_22, EntryPoint: string[1..2]}` → **无需 Docker** |
 | EntryPoint 支持 ADOT | 内部服务已验证用法：`["opentelemetry-instrument", "agent.py"]`（2 元素上限刚好） |
-| 已有 AgentCore runtime | `cat_demo_strands`、`cat_demo_langgraph`（us-east-1，别人的 demo）→ **不碰** |
+| 已有 AgentCore runtime | `cat_demo_strands`、`cat_demo_langgraph`（us-east-1）、`strands_agent`（us-west-2）—— 都是别人的 demo → **不碰** |
 | Bedrock 模型 | Haiku 4.5 / Sonnet 4.5 / Sonnet 5 / Opus 5 均可见 → 满足"换模型"这一优化轴 |
 
 ---
@@ -303,7 +303,8 @@ self-evolve-demo-with-omni/
 | **R1** | **Omni MCP 绑定单一 workspace**（已实测报错） | 阻塞所有 MCP 步骤 | 需要你在 Kiro 里打开本项目目录。在那之前我可以先把代码 / CDK / dataset 全部写完（不需要 MCP），MCP 相关步骤留到最后一起跑 |
 | **R2** | Direct Code Deploy 的依赖打包（架构 / 平台轮子） | 部署失败 | Phase 3 开头先部一个**最小 runtime** 实测（~10 分钟）。跑不通自动回退 ECR 容器（Dockerfile 我一并准备好） |
 | **R3** | 云端 trace / eval 有 5-10 分钟延迟 | Demo 节奏卡顿 | 脚本内置轮询等待 + 超时提示；Demo 讲稿里把这段安排成"讲解 evaluator 原理"的时间 |
-| **R4** | profile 默认 region 是 ap-southeast-1，AgentCore 在 us-east-1 | 静默连错 region，查不到东西 | 所有代码 / CDK / 脚本**显式** `us-east-1`，绝不依赖 profile 默认 |
+| **R4** | profile 默认 region 是 ap-southeast-1 | 静默连错 region，查不到东西 | 所有代码 / CDK / 脚本**显式**写 region，绝不依赖 profile 默认 |
+| **R4'** | 决定 region 的是 **Omni Space**（us-west-2），不是 AgentCore —— runtime 与 Space 不同 region 时 `search_agent_traces` **静默返回 0 行** | Phase 3/4 查不到 trace，且看起来像"没产生 trace"，极难 debug | REGION 统一改 `us-west-2`；us-west-2 前置条件已实测全绿（见 BUILD-LOG 2.0.2） |
 | **R5** | 账号里已有 `cat_demo_strands` / `cat_demo_langgraph` runtime | 误删/误改别人的 demo | 全部资源加 `selfevolve-demo` 前缀 + 独立 CDK stack；只 create，不 touch 已有资源 |
 | **R6** | 云上 evaluator 成本 | 9 evaluator × 20 例 × 2 轮 ≈ 360+ 次 judge 调用 | 用 Haiku 做 judge model；可用 `--limit` 缩小演示规模 |
 | **R7** | v1 "要够差但不能崩" | Demo 讲不出提升 | ✅ **已闭环**：第一版工具太强导致 v1 全答对，已重设计为 BASIC/ENHANCED 两层；实测失败率 40–60%，落在目标区间（BUILD-LOG Phase 1.15） |

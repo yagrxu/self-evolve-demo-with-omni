@@ -6,10 +6,17 @@
 
 关于"哪条 trace 对应哪条标注答案"
 --------------------------------
-skill Step 8.3 明令禁止靠位置匹配（positional dataset matching）。
-这里的做法是**先 invoke、再把拿到的 traceId 写回 dataset example 的
-``metadata.sourceTraceId``**，然后评估时 `manage_evaluations` 就能按
-sourceTraceId 显式对齐，而不是"第 3 条对第 3 条"。
+绝不靠位置匹配（"第 3 条对第 3 条"）—— 一次超时重试就会让后续全部错位一格，
+而错位后的分数看起来完全正常。
+
+做法：**先 invoke，再用已带 ``metadata.sourceTraceId`` 的 example 建 dataset**，
+评估时 `manage_evaluations` 按 sourceTraceId 显式对齐。
+
+顺序是刻意的。原本是"先建 dataset → invoke → 用 update_examples 写回 traceId"，
+但实测（BUILD-LOG 2.1）`update_examples` 即使按契约带上正确的 exampleId，也会把
+最后一条**追加**而非替换，导致 dataset 里出现重复 example 被双倍计权。
+先 invoke 后建 dataset 就完全不需要那个调用，也更贴合 omni-self-evolution
+SKILL.md Step 6 —— 合格样本集本来就是从 trace 构建的。
 
 用法：
     python scripts/local_baseline.py                  # 全量 15 条
@@ -22,6 +29,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import os
 import sys
 import time
 from datetime import datetime, timezone
@@ -55,7 +63,8 @@ def load_json(rel: str) -> dict:
 def canonical(score: float, sem: dict) -> float:
     """把原始分归一化到 [0,1]，方向已按 semantics.json 的声明处理。
 
-    skill Step 8.6 的规则：HIGHER_IS_BETTER 用 (s-min)/(max-min)，
+    归一化规则（SKILL.md Step 4 要求把它显式记进 evaluators.json）：
+    HIGHER_IS_BETTER 用 (s-min)/(max-min)，
     LOWER_IS_BETTER 用 1-(s-min)/(max-min)。方向搞反会把更差的候选选成 winner，
     所以这一步单独成函数并在下面有断言覆盖。
     """
@@ -140,7 +149,7 @@ def ensure_dataset(examples: list[dict], description: str) -> str:
 def freeze_dataset_version(ds_id: str) -> int | None:
     """冻结一个不可变版本并读回校验。
 
-    skill Step 5.5：必须 create version 然后**读回**核对条数与内容哈希 ——
+    SKILL.md Step 6：样本集必须冻结成不可变版本，并**读回**核对条数 ——
     不核对的话，dataset 在评估中途被改了也发现不了，A/B 就不可比。
     """
     ver = omni("manage_datasets", {
@@ -201,8 +210,11 @@ def verify_evaluator_semantics(ev_ids: dict[str, str], declared: dict) -> dict:
                 "action": "get_evaluator", "project_path": ".", "evaluator_id": ev_id,
             })
             scale = (info.get("rating_scale") or info.get("ratingScale") or {}).get("numerical")
-            if scale:
-                values = [float(s["value"]) for s in scale]
+            # 只收真的带 value 的档位。不同来源的 evaluator 形状不保证一致，
+            # 而这里的目的是"读到就用真值、读不到就沿用声明值" ——
+            # 为一个可选的加固步骤抛 KeyError 会把整条基线链路带崩。
+            values = [float(s["value"]) for s in (scale or []) if isinstance(s, dict) and "value" in s]
+            if values:
                 actual_min, actual_max = min(values), max(values)
                 if (actual_min, actual_max) != (float(sem["min"]), float(sem["max"])):
                     print(f"  ⚠️  {logical} 值域实测 [{actual_min},{actual_max}]，"
@@ -245,6 +257,18 @@ def invoke_all(examples: list[dict], run_dir: Path) -> list[dict]:
         results.append(rec)
 
     # invoke 的返回不一定带 traceId；补一轮从本地 trace store 里按时间窗补齐。
+    #
+    # 匹配依据必须是我们自己传进去的 session_id —— 绝不用位置/时间顺序匹配，
+    # 否则一次超时重试就会让所有后续 example 与 trace 错位一格，
+    # 而错位后的评估分数看起来完全正常。
+    #
+    # 实测（BUILD-LOG 2.1）踩到两处：
+    #   1. `list` 返回的是**摘要**，字段只有 id/name/status/model/latencyMs/
+    #      tokens/startTime/spanCount —— 里面没有 session。必须再调 `get`
+    #      拿到 spans，我们传的值在 span 属性 `session.id` 上。
+    #   2. Omni 顶层的 `sessionId` 是它自己生成的（形如 `session-<ms>`），
+    #      **不是**我们传的那个，拿它匹配永远匹配不上。
+    #   3. trace id 的字段名是 `id`，不是 `traceId`。
     missing = [r for r in results if not r.get("trace_id")]
     if missing:
         print(f"  {len(missing)} 条没拿到 traceId，从本地 trace store 补齐…")
@@ -256,13 +280,19 @@ def invoke_all(examples: list[dict], run_dir: Path) -> list[dict]:
             "window": {"start": int(time.time() * 1000) - 3_600_000, "end": int(time.time() * 1000)},
             "limit": 500,
         })
-        traces = listed.get("traces", [])
+        summaries = listed.get("traces", [])
+        ids = [t.get("id") or t.get("traceId") or t.get("trace_id") for t in summaries]
+        ids = [i for i in ids if i]
+        details = omni("search_local_telemetry", {
+            "operation": "get", "project_path": ".", "traceIds": ids,
+        }) if ids else []
+        if isinstance(details, dict):  # 单条时可能不是 list
+            details = details.get("traces") or [details]
         for rec in missing:
-            for t in traces:
-                blob = json.dumps(t, ensure_ascii=False)
-                if rec["session_id"] in blob:
-                    rec["trace_id"] = t.get("traceId") or t.get("trace_id")
-                    rec["trace_matched_by"] = "session_id"
+            for t in details:
+                if rec["session_id"] in json.dumps(t, ensure_ascii=False):
+                    rec["trace_id"] = t.get("id") or t.get("traceId")
+                    rec["trace_matched_by"] = "span.session.id"
                     break
 
     (run_dir / "invocations.jsonl").write_text(
@@ -270,33 +300,6 @@ def invoke_all(examples: list[dict], run_dir: Path) -> list[dict]:
     got = sum(1 for r in results if r.get("trace_id"))
     print(f"✓ invoke 完成：{got}/{len(results)} 条拿到 trace")
     return results
-
-
-def attach_source_trace_ids(ds_id: str, examples: list[dict], invocations: list[dict]) -> None:
-    """把 traceId 写回 dataset example 的 metadata.sourceTraceId。
-
-    **这是避免位置匹配的关键一步**（skill Step 8.3）。写回之后，
-    manage_evaluations 用 traceIds + datasetId 就能按 sourceTraceId 显式对齐。
-    """
-    by_sid = {r["scenario_id"]: r.get("trace_id") for r in invocations}
-    updated = []
-    for ex in examples:
-        tid = by_sid.get(ex["scenario_id"])
-        if not tid:
-            continue
-        e = json.loads(json.dumps(ex))  # 深拷贝，不改原 dataset 文件
-        e["metadata"] = {**e.get("metadata", {}), "sourceTraceId": tid}
-        updated.append(e)
-    if not updated:
-        print("  ⚠️  没有任何 example 能关联到 trace，跳过写回")
-        return
-    omni("manage_datasets", {
-        "action": "update_examples", "dataSource": "local", "project_path": ".",
-        "datasetId": ds_id, "examples": updated,
-    })
-    print(f"✓ 已把 sourceTraceId 写回 {len(updated)} 条 example")
-
-
 # ── Step 6：评估 ──────────────────────────────────────────────────────────
 
 
@@ -322,8 +325,25 @@ def run_evaluators(ds_id: str, semantics: dict, invocations: list[dict], run_dir
                 "datasetId": ds_id,
                 "evaluatorLevel": level,
             }, timeout_s=1800)
-            all_results[logical] = {"status": "ok", "elapsed_s": round(time.time() - t0, 1), "raw": res}
-            print(f" 完成 {round(time.time()-t0,1)}s")
+            elapsed = round(time.time() - t0, 1)
+            # `run` 会以 HTTP 200 + 每条 item `score:-1, error:...` 的形式返回**部分失败**
+            # （实测：judge endpoint 偶发 `getaddrinfo ENOTFOUND`）。
+            # 必须逐条查 —— 否则一份全 -1 的结果会被当成"agent 分数极差"写进基线报告，
+            # 而真相是判官从没跑起来。这是本项目最不能容忍的一类静默失败：
+            # 它不会报错，只会给出一个可信度为零、看起来却很正常的结论。
+            rows = res.get("results") or res.get("evaluations") or []
+            errs = [r for r in rows if isinstance(r, dict) and (r.get("error") or r.get("score") == -1)]
+            status = "ok" if not errs else ("error" if len(errs) == len(rows) else "partial")
+            all_results[logical] = {
+                "status": status, "elapsed_s": elapsed, "raw": res,
+                "item_total": len(rows), "item_failed": len(errs),
+                "item_errors": sorted({str(r.get("error"))[:200] for r in errs}) or None,
+            }
+            if status == "ok":
+                print(f" 完成 {elapsed}s")
+            else:
+                print(f" ⚠️ {status}：{len(errs)}/{len(rows)} 条失败 —— "
+                      f"{sorted({str(r.get('error'))[:90] for r in errs})}")
         except OmniError as e:
             all_results[logical] = {"status": "error", "elapsed_s": round(time.time() - t0, 1), "error": str(e)}
             print(f" 失败：{e}")
@@ -333,24 +353,97 @@ def run_evaluators(ds_id: str, semantics: dict, invocations: list[dict], run_dir
     return all_results
 
 
+def variant_identity_from_trace(trace_id: str | None) -> dict:
+    """从 trace 的 span 属性里读出变体身份（prompt 版本 / hash / 模型）。
+
+    **为什么不从 invoke 的响应体读**：Omni 的 `manage_test_agent(invoke_agent)` 返回的是
+    它自己的信封（success / statusCode / content / exchange / sessionId），**不含**我们
+    agent 回显的 prompt_version 等字段 —— 实测拿到的是空值，报告里就成了「未获取到」。
+
+    而 `llm.prompt_template.version` 是 OmniPromptProcessor 打在 span 上的，实测确实存在。
+    这里就是 omni-self-evolution SKILL.md Step 1 第 4 条前置检查所依赖的那个属性 ——
+    它缺失意味着 replay 结果无法归因到变体，必须当作前置失败。
+    """
+    empty = {"prompt_version": "（trace 上没有 llm.prompt_template.version）",
+             "prompt_hash": "", "model_id": "（未获取到）", "tool_tier": "（未获取到）"}
+    if not trace_id:
+        return empty
+    try:
+        detail = omni("search_local_telemetry", {
+            "operation": "get", "project_path": ".", "traceIds": [trace_id]})
+    except OmniError:
+        return empty
+    traces = detail if isinstance(detail, list) else (detail.get("traces") or [detail])
+    if not traces:
+        return empty
+
+    found: dict[str, str] = {}
+    model = traces[0].get("model") or ""
+
+    def walk(node) -> None:
+        if isinstance(node, dict):
+            for k, v in node.items():
+                if k == "llm.prompt_template.version" and isinstance(v, str):
+                    found.setdefault("prompt_version", v)
+                elif k == "llm.prompt_template.hash" and isinstance(v, str):
+                    found.setdefault("prompt_hash", v)
+                else:
+                    walk(v)
+        elif isinstance(node, list):
+            for item in node:
+                walk(item)
+
+    walk(traces[0])
+
+    # trace 上只有 `.version` 和 `.template`，**没有** `.hash`（实测）。
+    # hash 从本地 prompts.json 现算 —— 那本来就是唯一真相源，而且 SKILL.md Step 2 要求
+    # 冻结进 manifest 的正是这个值（Step 11 的防篡改校验拿它比对）。
+    prompt_hash = found.get("prompt_hash", "")
+    if not prompt_hash:
+        try:
+            sys.path.insert(0, str(REPO / "agent"))
+            from prompt_loader import get_prompt_hash  # noqa: PLC0415
+            prompt_hash = get_prompt_hash(PROMPT_NAME)
+        except Exception as e:  # noqa: BLE001
+            print(f"  ⚠️  本地读取 prompt hash 失败：{e}")
+
+    # 记录工具**层**而不是逐个工具名：`active_tools()` 在 agent.py 里，导入它会把整个
+    # BedrockAgentCoreApp 拉起来。而工具层（AGENT_TOOL_TIER）正是 SKILL.md Invariant 2
+    # 要求冻结的那条轴 —— 记它就够了，且零副作用。
+    tool_tier = os.environ.get("AGENT_TOOL_TIER", "basic")
+
+    return {
+        "prompt_version": found.get("prompt_version", empty["prompt_version"]),
+        "prompt_hash": prompt_hash,
+        "model_id": model or empty["model_id"],
+        "tool_tier": tool_tier,
+        "identity_source": "trace span attributes" if found else "not found",
+        "prompt_hash_source": "local prompts.json（trace 上没有 .hash 属性）",
+    }
+
+
 def extract_scores(raw: dict, semantics: dict) -> dict[str, dict[str, float | None]]:
     """从各 evaluator 的原始返回里抽出 per-scenario 的分数。
 
     返回不同 evaluator 的形状可能不同，所以这里做宽松解析，
     并且**把解析不出来的记为 None（unscored），绝不当成 0**——
-    skill Step 8.8 / 失败处理都强调：evaluator 缺失只降低 coverage，
+    SKILL.md Step 9 的"missing gate input is a failure, not a pass"：evaluator 缺失只降低 coverage，
     不能重新解释为 0 分，否则会凭空造出"candidate 变差了"的结论。
     """
     out: dict[str, dict[str, float | None]] = {}
     for logical, block in raw.items():
         scores: dict[str, float | None] = {}
-        if block.get("status") != "ok":
+        # "partial" 也要解析 —— 成功的行仍然是有效观测，丢掉它们只会无谓降低 coverage。
+        # 失败的行在下面会被记为 None（unscored），不会被当成 0 分。
+        if block.get("status") not in ("ok", "partial"):
             out[logical] = scores
             continue
         rows = block["raw"].get("results") or block["raw"].get("evaluations") or []
         for row in rows if isinstance(rows, list) else []:
-            key = (row.get("key") or row.get("targetKey") or row.get("traceId")
-                   or row.get("scenario_id") or "")
+            # `itemKey` 是 Omni 实际用的字段名（实测），放在最前面 ——
+            # 漏了它会导致报告里每一格都查不到分而显示 —。
+            key = (row.get("itemKey") or row.get("key") or row.get("targetKey")
+                   or row.get("traceId") or row.get("scenario_id") or "")
             score = row.get("score", row.get("value"))
             if score is None or score == -1:  # -1 是 Omni 的 "unscored" 约定
                 scores[key] = None
@@ -371,7 +464,7 @@ AMOUNT_RE = re.compile(r"(\d[\d,]*\.?\d*)\s*元")
 def deterministic_gates(examples: list[dict], invocations: list[dict]) -> list[dict]:
     """跑 semantics.json 里声明的两个确定性检查。
 
-    这些不经过 LLM judge，所以结论无争议；skill Step 8.8 规定
+    这些不经过 LLM judge，所以结论无争议；按 SKILL.md Step 9 的 safety 硬门精神，
     critical deterministic failure 覆盖 judge 分数。
     """
     by_sid = {r["scenario_id"]: r for r in invocations}
@@ -408,7 +501,7 @@ def write_report(run_dir: Path, manifest: dict, examples: list[dict],
     a(f"- 生成时间：{manifest['finished_at']}")
     a(f"- prompt 版本：`{manifest['prompt_version']}`（hash `{manifest['prompt_hash'][:16]}`）")
     a(f"- 模型：`{manifest['model_id']}`")
-    a(f"- 启用工具：{', '.join(manifest['tools_enabled']) or '（未获取到）'}")
+    a(f"- 工具层 `AGENT_TOOL_TIER`：{manifest['tool_tier']}（Phase 5 需冻结的轴）")
     a(f"- dataset：`{manifest['dataset_name']}` v{manifest['dataset_version']}"
       f"（{len(examples)} 条，id `{manifest['dataset_id']}`）")
     a(f"- 基准日 `DEMO_AS_OF_DATE`：{manifest['as_of_date']}\n")
@@ -427,20 +520,36 @@ def write_report(run_dir: Path, manifest: dict, examples: list[dict],
     a("")
 
     a("## Evaluator 分数（已按 semantics.json 归一化到 0–1，越高越好）\n")
-    a("| Evaluator | 层级 | 已评分 | 均值 | 及格率 | 冻结值域 |")
+    a("| Evaluator | 层级 | 有效观测 | 均值 | 及格率 | 冻结值域 |")
     a("|---|---|---:|---:|---:|---|")
+    excluded = []
     for logical, sem in manifest["evaluator_semantics"].items():
         s = scores.get(logical, {})
         vals = [v for v in s.values() if v is not None]
         pass_canon = canonical(float(sem["pass_threshold"]), sem)
         n_pass = sum(1 for v in vals if v >= pass_canon)
+        per_example = sem.get("per_example", True)
+        # per_example=False 的 evaluator 只有 1 个有效观测（同一判断被复制到每个 itemKey）。
+        # 报告里必须显示真实的 n，否则 "15/15" 会让人以为它和其他维度一样可信。
+        n_eff = len(vals) if per_example else (1 if vals else 0)
         mean = f"{sum(vals)/len(vals):.3f}" if vals else "—"
-        rate = f"{100*n_pass/len(vals):.0f}%" if vals else "—"
-        a(f"| `{logical}` | {sem['level']} | {len(vals)}/{len(s) or len(invocations)} | "
+        rate = f"{100*n_pass/len(vals):.0f}%" if (vals and per_example) else "—"
+        mark = "" if per_example else " ⚠️"
+        if not per_example and vals:
+            excluded.append(logical)
+        a(f"| `{logical}`{mark} | {sem['level']} | {n_eff}/{len(s) or len(invocations)} | "
           f"{mean} | {rate} | [{sem['min']},{sem['max']}] {sem['direction']} |")
     a("")
     a("> **未评分（unscored）一律记 `None`，绝不当 0 分。** evaluator 缺失只降低 coverage —— "
-      "把缺失当 0 会凭空造出「变差了」的结论（skill Step 8.8）。\n")
+      "把缺失当 0 会凭空造出「变差了」的结论。\n")
+    if excluded:
+        a(f"> ⚠️ **{', '.join('`'+e+'`' for e in excluded)} 不参与 per-example 聚合，也不进 Phase 5 门禁。**\n"
+          f"> 本地 dev server 下 collector 的 `session.id` 只在启动时设一次（写在 `.env.omni`），"
+          f"所以全部 {len(invocations)} 条调用共享同一个 session。SESSION 级 evaluator 因此只做了**一次**判断，"
+          f"再把同一个 score 和 explanation 复制给每个 itemKey —— 表面看是 {len(invocations)} 个观测，"
+          f"实际 **n=1 且方差为 0**。当成独立观测会让 Phase 5 的 paired bootstrap 严重高估自由度。\n"
+          f"> 上面的均值仅作为**单条 session 级观测**参考，及格率一栏因此留空。"
+          f"详见 `evaluators/semantics.json` 的 `_per_example_reason`。\n")
 
     a("## 确定性门\n")
     if gates:
@@ -461,13 +570,22 @@ def write_report(run_dir: Path, manifest: dict, examples: list[dict],
     a("|---|---|---:|---:|---|")
     pg, corr = scores.get("PolicyGrounding", {}), scores.get("Builtin.Correctness", {})
     by_sid = {r["scenario_id"]: r for r in invocations}
+    def fmt(d: dict, sid: str, tid: str) -> str:
+        """在 evaluator 的分数表里按 scenario_id 或 traceId 找这条的分，找不到返回 —。"""
+        for k, v in d.items():
+            if v is None:
+                continue
+            key = str(k)
+            if sid in key or (tid and tid in key):
+                return f"{float(v):.2f}"
+        return "—"
+
     for ex in examples:
         sid = ex["scenario_id"]
         tid = by_sid.get(sid, {}).get("trace_id") or ""
-        f = lambda d: next((f"{v:.2f}" for k, v in d.items() if sid in str(k) or (tid and tid in str(k))  # noqa: E731
-                            ) if v is not None else "—", "—")
         note = "invoke 失败" if by_sid.get(sid, {}).get("status") != "ok" else ""
-        a(f"| {ex['metadata']['archetype']} | `{sid}` | {f(pg)} | {f(corr)} | {note} |")
+        a(f"| {ex['metadata']['archetype']} | `{sid}` | "
+          f"{fmt(pg, sid, tid)} | {fmt(corr, sid, tid)} | {note} |")
     a("")
 
     a("## 产物\n")
@@ -512,10 +630,7 @@ def main() -> int:
     print("\n[2/7] 启动 collector 与 dev server")
     ensure_server()
 
-    print("\n[3/7] 注册并冻结 dataset")
-    ds_id = ensure_dataset(examples, dataset["description"])
-
-    print("\n[4/7] 准备 evaluator")
+    print("\n[3/7] 准备 evaluator")
     pg_id = ensure_policy_grounding()
     ev_ids = {name: (pg_id if name == "PolicyGrounding" else name)
               for name in sem_file["quality_evaluators"] if not name.startswith("_")}
@@ -523,13 +638,35 @@ def main() -> int:
         ev_ids, {k: v for k, v in sem_file["quality_evaluators"].items() if not k.startswith("_")})
     print(f"✓ 冻结 {len(semantics)} 个质量 evaluator 的打分语义")
 
-    print("\n[5/7] 调用 agent")
+    print("\n[4/7] 调用 agent")
     if args.skip_invoke:
         invocations = [json.loads(l) for l in (run_dir / "invocations.jsonl").read_text().splitlines() if l.strip()]
         print(f"✓ 复用 {len(invocations)} 条已有调用记录")
     else:
         invocations = invoke_all(examples, run_dir)
-        attach_source_trace_ids(ds_id, examples, invocations)
+
+    # **先 invoke、再建 dataset。** 顺序是刻意的：这样 sourceTraceId 在创建时就写进
+    # example，完全不需要 `update_examples`。
+    #
+    # 实测（BUILD-LOG 2.1）：`update_examples` 即使按契约带上正确的 exampleId，
+    # 也会把最后一条**追加**而不是替换 —— dataset 里出现两条同 exampleId 的 dev_015，
+    # 一条有 sourceTraceId、一条没有。重复项会在基线里被双倍计权，而 15→16 这种
+    # 数量偏差很容易被当成无关紧要的日志噪声忽略过去。
+    #
+    # 这也更贴合 omni-self-evolution SKILL.md 的 Step 6：合格样本集是**从 trace 构建**的，
+    # 本来就该在 invoke 之后成形。
+    print("\n[5/7] 注册并冻结 dataset")
+    by_sid = {r["scenario_id"]: r.get("trace_id") for r in invocations}
+    ds_examples = []
+    for ex in examples:
+        e = json.loads(json.dumps(ex))  # 深拷贝，不改原 dataset 文件
+        tid = by_sid.get(ex["scenario_id"])
+        if tid:
+            e["metadata"] = {**e.get("metadata", {}), "sourceTraceId": tid}
+        ds_examples.append(e)
+    linked = sum(1 for e in ds_examples if e.get("metadata", {}).get("sourceTraceId"))
+    ds_id = ensure_dataset(ds_examples, dataset["description"])
+    print(f"✓ {linked}/{len(ds_examples)} 条 example 带上了 sourceTraceId（显式对齐，非位置匹配）")
 
     ds_version = freeze_dataset_version(ds_id)
 
@@ -540,7 +677,7 @@ def main() -> int:
 
     print("\n[7/7] 写报告")
     first_ok = next((r for r in invocations if r["status"] == "ok"), {})
-    echoed = first_ok.get("response", {}) if isinstance(first_ok.get("response"), dict) else {}
+    echoed = variant_identity_from_trace(first_ok.get("trace_id"))
     manifest = {
         "run_id": run_dir.name,
         "phase": "2-local-baseline",
@@ -551,7 +688,9 @@ def main() -> int:
         "prompt_version": echoed.get("prompt_version", "（未从响应中获取到）"),
         "prompt_hash": echoed.get("prompt_hash", ""),
         "model_id": echoed.get("model_id", "（未从响应中获取到）"),
-        "tools_enabled": echoed.get("tools_enabled", []),
+        "tool_tier": echoed.get("tool_tier", "（未获取到）"),
+        "identity_source": echoed.get("identity_source", ""),
+        "prompt_hash_source": echoed.get("prompt_hash_source", ""),
         "as_of_date": "2026-09-17",
         "evaluator_semantics": semantics,
         "gates": sem_file["gates"],

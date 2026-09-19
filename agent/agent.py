@@ -240,7 +240,7 @@ def build_agent() -> Agent:
 
     model = BedrockModel(
         model_id=(cfg or {}).get("modelId", FALLBACK_MODEL_ID),
-        region_name=os.environ.get("AWS_REGION", "us-east-1"),
+        region_name=os.environ.get("AWS_REGION", "us-west-2"),
         temperature=params.get("temperature", 0.3),
         max_tokens=params.get("max_tokens", 1024),
     )
