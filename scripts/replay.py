@@ -262,7 +262,7 @@ def replay_variant(variant: str, examples: list[dict], reps: int, run_dir: Path)
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--run", required=True, help=".omni/self-evolution/ 下的 run_id")
-    ap.add_argument("--set", default="control", choices=["control", "holdout"])
+    ap.add_argument("--set", default="control", choices=["control", "holdout", "verify"])
     ap.add_argument("--repetitions", type=int, default=3)
     ap.add_argument("--variants", default="", help="逗号分隔；默认 baseline + 全部候选")
     args = ap.parse_args()

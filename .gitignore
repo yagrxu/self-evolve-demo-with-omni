@@ -47,3 +47,10 @@ runs/
 !.claude/skills/omni/self-evolution/
 .claude/*
 !.claude/skills/
+
+# 上面 `!.kiro/` 解除目录忽略后，.kiro/settings/ 也跟着露出来了。
+# 那是本机的 MCP / 权限配置（含个人环境信息），不入库。
+.kiro/settings/
+
+# macOS
+.DS_Store

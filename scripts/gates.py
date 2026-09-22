@@ -160,7 +160,7 @@ def perf_stats(records: list[dict]) -> dict[str, float]:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--run", required=True)
-    ap.add_argument("--set", default="control", choices=["control", "holdout"])
+    ap.add_argument("--set", default="control", choices=["control", "holdout", "verify"])
     ap.add_argument("--waive-gate", action="append", default=[], metavar="GATE=理由",
                     help="人工豁免某道门，格式 `门名前缀=理由`。豁免会写进 gates-*.json 并在"
                          "摘要里显式标出 —— **绝不静默放行**")
