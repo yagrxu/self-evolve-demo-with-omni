@@ -45,6 +45,7 @@ runs/
 !.claude/skills/omni/self-evolution/**
 .claude/skills/omni/*
 !.claude/skills/omni/self-evolution/
+!.claude/skills/omni/change-surface/
 .claude/*
 !.claude/skills/
 
