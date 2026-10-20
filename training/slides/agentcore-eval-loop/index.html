@@ -303,6 +303,18 @@ pre.code .f { color: #fdba74; }                    /* flag */
 .slide-footer { position: fixed; bottom: clamp(8px, 1.2vh, 16px); left: clamp(12px, 2vw, 24px); z-index: 999; font-size: clamp(0.6rem, 1vw, 0.8rem); letter-spacing: 0.02em; color: rgba(255,255,255,0.5); }
 .page-number { position: fixed; bottom: clamp(8px, 1.2vh, 16px); right: clamp(12px, 2vw, 24px); z-index: 999; font-family: var(--font-body); font-size: clamp(0.6rem, 0.9vw, 0.75rem); letter-spacing: 0.05em; color: rgba(255,255,255,0.35); font-variant-numeric: tabular-nums; }
 @media (max-height: 600px) { .slide-footer, .page-number { display: none; } }
+
+/* === REPO QR CARD (title + closing) === */
+.repo-card { display:flex; align-items:center; gap:clamp(0.6rem,1.2vw,1rem);
+    padding:clamp(0.5rem,0.9vw,0.8rem) clamp(0.7rem,1.2vw,1rem); border-radius:clamp(10px,1vw,14px);
+    background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.18); backdrop-filter:blur(6px);
+    text-decoration:none; color:inherit; width:max-content; max-width:100%; }
+.repo-card img { width:clamp(64px,8vw,120px); height:auto; background:#fff; padding:clamp(3px,0.4vw,6px); border-radius:8px; display:block; }
+.repo-card .repo-text { display:flex; flex-direction:column; gap:0.25em; text-align:left; }
+.repo-card .repo-label { font-size:var(--small-size); opacity:0.7; letter-spacing:0.08em; text-transform:uppercase; }
+.repo-card code { font-size:clamp(0.7rem,1vw,1rem); color:#fff; word-break:break-all; }
+.repo-card.corner { position:absolute; right:clamp(1rem,3vw,3rem); bottom:clamp(2.2rem,5vh,4rem); z-index:5; }
+@media (max-height:600px) { .repo-card img { width:clamp(48px,6vw,72px); } }
 </style>
 </head>
 <body>
@@ -328,6 +340,7 @@ pre.code .f { color: #fdba74; }                    /* flag */
         <p class="title-sub reveal d4">Agent 评估改进闭环：可观测性 → 数据集 → 评估 → 分类 → 改进 → 分阶段确认<br>两种做法：CloudWatch 标准版（AWS CLI）与 Omni 版（IDE + MCP）</p>
         <p class="speaker-info reveal d5" id="speakerInfo"></p>
     </div>
+    <a class="repo-card corner reveal d6" href="https://github.com/yagrxu/self-evolve-demo-with-omni" target="_blank" rel="noopener"><img src="assets/qr-github.svg" alt="GitHub QR"><span class="repo-text"><span class="repo-label">Demo · GitHub</span><code>github.com/yagrxu/self-evolve-demo-with-omni</code></span></a>
 </section>
 
 <!-- ============ 2. WHY ============ -->
@@ -967,6 +980,7 @@ pre.code .f { color: #fdba74; }                    /* flag */
         <div class="title-accent reveal d3"></div>
         <p class="title-sub reveal d4">开 Transaction Search 并验证 span · 标准答案只来自规则 · 多批次 + A/A 测噪声<br>门禁事先登记、按阶段收紧 · 每轮只改一层、对照同包重建 · 上线前人确认</p>
         <p class="title-sub reveal d5" style="font-size:var(--small-size);opacity:0.75;">材料：training/cloudwatch（CLI 脚本 + demo 记录）· training/omni（MCP 版本）</p>
+        <div class="reveal d6" style="display:flex;justify-content:center;margin-top:clamp(0.6rem,1.5vh,1.2rem);"><a class="repo-card" href="https://github.com/yagrxu/self-evolve-demo-with-omni" target="_blank" rel="noopener"><img src="assets/qr-github.svg" alt="GitHub QR"><span class="repo-text"><span class="repo-label">Demo · GitHub</span><code>github.com/yagrxu/self-evolve-demo-with-omni</code></span></a></div>
     </div>
 </section>
 
