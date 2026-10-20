@@ -28,7 +28,20 @@ export const PREFIX = 'selfevolve-demo';
  * AgentCore runtime 名的约束是 `[a-zA-Z][a-zA-Z0-9_]{0,47}` —— 不能有连字符，
  * 所以这里用下划线版本，不能直接套用 PREFIX。
  */
-export const RUNTIME_NAME = 'selfevolve_demo_order_support';
+
+/**
+ * 候选变体部署成**独立 runtime + 独立 stack**（training/cloudwatch 流程用），绝不覆盖 baseline。
+ * 未设置时为空串 —— baseline 的合成结果与之前字节一致。
+ * 只允许 [a-z0-9_]，因为它同时进 runtime 名（下划线）和 stack 名。
+ */
+export const VARIANT_SUFFIX = process.env.AGENT_RUNTIME_SUFFIX ?? '';
+if (!/^[a-z0-9_]*$/.test(VARIANT_SUFFIX)) {
+  throw new Error(`AGENT_RUNTIME_SUFFIX 只允许 [a-z0-9_]，收到 ${VARIANT_SUFFIX}`);
+}
+export const RUNTIME_NAME = 'selfevolve_demo_order_support' + (VARIANT_SUFFIX ? `_${VARIANT_SUFFIX}` : '');
+
+/** 工具层（basic | enhanced）。默认 basic 时**不写**进 runtime 环境变量，保持 baseline 模板不变。 */
+export const TOOL_TIER = process.env.AGENT_TOOL_TIER ?? 'basic';
 
 /** RuntimeEndpoint 名。Phase 3 用 v1，Phase 6 用 v2（并存，便于并排对比）。 */
 export const ENDPOINT_NAME = process.env.AGENT_ENDPOINT_NAME ?? 'v1';

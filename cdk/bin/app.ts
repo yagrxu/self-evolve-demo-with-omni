@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 import * as cdk from 'aws-cdk-lib';
 import { AgentStack } from '../lib/agent-stack';
-import { EvalStack } from '../lib/eval-stack';
-import { PREFIX, REGION } from '../lib/config';
+import { EvalStack, VariantEvalStack } from '../lib/eval-stack';
+import { PREFIX, REGION, VARIANT_SUFFIX } from '../lib/config';
 
 const app = new cdk.App();
 
@@ -16,7 +16,10 @@ const env: cdk.Environment = {
   region: REGION,
 };
 
-const agent = new AgentStack(app, `${PREFIX}-agent`, {
+// 候选变体：独立 stack（selfevolve-demo-agent-<suffix>）+ 自己的默认评估 stack（selfevolve-demo-eval-<suffix>）
+const SUFFIX = VARIANT_SUFFIX ? `-${VARIANT_SUFFIX.replace(/_/g, '-')}` : '';
+
+const agent = new AgentStack(app, `${PREFIX}-agent${SUFFIX}`, {
   env,
   description: 'selfevolve-demo：订单售后客服 agent（AgentCore Runtime，Direct Code Deploy）',
 });
@@ -24,12 +27,24 @@ const agent = new AgentStack(app, `${PREFIX}-agent`, {
 // evaluator 需要引用 runtime/endpoint，所以 EvalStack 必然依赖 AgentStack。
 // 拆成两个 stack 而不是一个：Phase 6 重新部署 agent 时不必动评估配置，
 // 反过来调 evaluator 组合时也不会触发 runtime 重建。
-new EvalStack(app, `${PREFIX}-eval`, {
-  env,
-  description: 'selfevolve-demo：自定义 evaluator + 线上持续评估',
-  runtime: agent.runtime,
-  endpoint: agent.endpoint,
-});
+if (!VARIANT_SUFFIX) {
+  new EvalStack(app, `${PREFIX}-eval`, {
+    env,
+    description: 'selfevolve-demo：自定义 evaluator + 线上持续评估',
+    runtime: agent.runtime,
+    endpoint: agent.endpoint,
+  });
+} else {
+  // 候选 / 对照也要被默认评估覆盖（S2 灰度唯一的评分来源），evaluator 复用生产那一份
+  new VariantEvalStack(app, `${PREFIX}-eval${SUFFIX}`, {
+    env,
+    description: `selfevolve-demo：${VARIANT_SUFFIX} 的默认评估（Online Evaluation）`,
+    runtime: agent.runtime,
+    endpoint: agent.endpoint,
+    configName: `${process.env.RUN_ID ?? 'variant'}_${VARIANT_SUFFIX}_online`.replace(/[^a-zA-Z0-9_]/g, '_').slice(0, 48),
+    policyGroundingEvaluatorId: process.env.POLICY_GROUNDING_EVALUATOR_ID ?? 'selfevolve_demo_PolicyGrounding-IS7lH859gB',
+  });
+}
 
 cdk.Tags.of(app).add('Project', 'selfevolve-demo-with-omni');
 cdk.Tags.of(app).add('ManagedBy', 'cdk');

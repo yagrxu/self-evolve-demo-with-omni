@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgentCore 评估改进闭环 —— CloudWatch 标准版 & Omni 版</title>
+
+<!-- Fonts: Urbanist（标题）· Albert Sans（正文）· Noto Sans SC（中文）· JetBrains Mono（代码） -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@500;700;800&family=Albert+Sans:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<!-- Icons: Lucide -->
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<!-- Speaker info（改 speaker.js 即可，不必动 HTML） -->
+<script src="speaker.js"></script>
+
+<style>
+/* ===========================================
+   CSS CUSTOM PROPERTIES (THEME) — re:Invent Keynote
+   =========================================== */
+:root {
+    --bg-primary: #0A0A0A;
+    --bg-gradient: linear-gradient(135deg, #1A0033 0%, #2D0066 40%, #7C3AED 100%);
+    --accent-purple: #8B5CF6;
+    --accent-pink: #D946EF;
+    --accent-orange: #FF9900;
+    --accent-blue: #3B82F6;
+    --accent-green: #34D399;
+    --text-primary: #FFFFFF;
+    --text-secondary: rgba(255, 255, 255, 0.62);
+    --glow-purple: rgba(139, 92, 246, 0.4);
+    --card-bg: rgba(139, 92, 246, 0.08);
+    --card-border: rgba(139, 92, 246, 0.25);
+    --code-bg: rgba(8, 4, 20, 0.85);
+
+    --font-display: 'Urbanist', 'Noto Sans SC', sans-serif;
+    --font-body: 'Albert Sans', 'Noto Sans SC', sans-serif;
+    --font-mono: 'JetBrains Mono', 'Noto Sans SC', monospace;
+
+    --subtitle-size: clamp(0.85rem, 1.8vw, 1.25rem);
+    --code-size: clamp(0.55rem, 0.95vw, 0.82rem);
+
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    --duration-normal: 0.7s;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* ===========================================
+   VIEWPORT FITTING: MANDATORY BASE STYLES (viewport-base.css, full)
+   =========================================== */
+html, body { height: 100%; overflow-x: hidden; scrollbar-width: none; }
+html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; }
+html { scroll-snap-type: y mandatory; scroll-behavior: smooth; }
+.slide {
+    width: 100vw; height: 100vh; height: 100dvh; overflow: hidden;
+    scroll-snap-align: start; display: flex; flex-direction: column; position: relative;
+}
+.slide-content {
+    flex: 1; display: flex; flex-direction: column; justify-content: center;
+    max-height: 100%; overflow: hidden; padding: var(--slide-padding);
+    position: relative; z-index: 1;
+}
+:root {
+    --title-size: clamp(1.5rem, 5vw, 4rem);
+    --h2-size: clamp(1.25rem, 3.2vw, 2.4rem);
+    --h3-size: clamp(0.95rem, 1.9vw, 1.4rem);
+    --body-size: clamp(0.75rem, 1.35vw, 1.06rem);
+    --small-size: clamp(0.62rem, 0.95vw, 0.85rem);
+    --slide-padding: clamp(1rem, 4vw, 4rem);
+    --content-gap: clamp(0.5rem, 2vw, 1.8rem);
+    --element-gap: clamp(0.25rem, 1vw, 1rem);
+}
+.card, .container, .content-box { max-width: min(90vw, 1000px); max-height: min(80vh, 700px); }
+.feature-list, .bullet-list { gap: clamp(0.4rem, 1vh, 1rem); }
+.feature-list li, .bullet-list li { font-size: var(--body-size); line-height: 1.4; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: clamp(0.5rem, 1.5vw, 1rem); }
+img, .image-container { max-width: 100%; max-height: min(50vh, 400px); object-fit: contain; }
+@media (max-height: 700px) {
+    :root { --slide-padding: clamp(0.75rem, 3vw, 2rem); --content-gap: clamp(0.4rem, 1.5vw, 1rem);
+            --title-size: clamp(1.25rem, 4.5vw, 2.5rem); --h2-size: clamp(1rem, 3vw, 1.75rem); }
+}
+@media (max-height: 600px) {
+    :root { --slide-padding: clamp(0.5rem, 2.5vw, 1.5rem); --content-gap: clamp(0.3rem, 1vw, 0.75rem);
+            --title-size: clamp(1.1rem, 4vw, 2rem); --body-size: clamp(0.7rem, 1.2vw, 0.95rem); }
+    .nav-dots, .keyboard-hint, .decorative { display: none; }
+}
+@media (max-height: 500px) {
+    :root { --slide-padding: clamp(0.4rem, 2vw, 1rem); --title-size: clamp(1rem, 3.5vw, 1.5rem);
+            --h2-size: clamp(0.9rem, 2.5vw, 1.25rem); --body-size: clamp(0.65rem, 1vw, 0.85rem); }
+}
+@media (max-width: 600px) { :root { --title-size: clamp(1.25rem, 7vw, 2.5rem); } .grid { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.2s !important; }
+    html { scroll-behavior: auto; }
+}
+
+/* ===========================================
+   BASE TYPOGRAPHY & BACKGROUND
+   =========================================== */
+body { background: var(--bg-primary); color: var(--text-primary); font-family: var(--font-body); -webkit-font-smoothing: antialiased; }
+code, .mono { font-family: var(--font-mono); }
+.hl-o { color: var(--accent-orange); }
+.hl-p { color: #c4b5fd; }
+.hl-g { color: var(--accent-green); }
+
+/* ===========================================
+   REVEAL ANIMATIONS
+   =========================================== */
+.reveal { opacity: 0; transform: translateY(25px); transition: opacity var(--duration-normal) var(--ease-out-expo), transform var(--duration-normal) var(--ease-out-expo); }
+.slide.visible .reveal { opacity: 1; transform: translateY(0); }
+.slide.visible .reveal.d1 { transition-delay: 0.1s; } .slide.visible .reveal.d2 { transition-delay: 0.2s; }
+.slide.visible .reveal.d3 { transition-delay: 0.3s; } .slide.visible .reveal.d4 { transition-delay: 0.4s; }
+.slide.visible .reveal.d5 { transition-delay: 0.5s; } .slide.visible .reveal.d6 { transition-delay: 0.6s; }
+.slide.visible .reveal.d7 { transition-delay: 0.7s; }
+
+/* ===========================================
+   FLOATING ORBS (content slides)
+   =========================================== */
+.floating-orb { position: absolute; border-radius: 50%; pointer-events: none; z-index: 0; filter: blur(20px); }
+.orb-purple { background: radial-gradient(circle, rgba(139,92,246,0.35) 0%, rgba(139,92,246,0) 70%); }
+.orb-pink { background: radial-gradient(circle, rgba(217,70,239,0.3) 0%, rgba(217,70,239,0) 70%); }
+.orb-blue { background: radial-gradient(circle, rgba(59,130,246,0.25) 0%, rgba(59,130,246,0) 70%); }
+@keyframes orbFloat1 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(20px,-30px) scale(1.05); } }
+@keyframes orbFloat2 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-25px,20px) scale(0.95); } }
+@keyframes orbFloat3 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(15px,25px) scale(1.03); } }
+
+/* ===========================================
+   SECTION LABEL / TITLE
+   =========================================== */
+.section-label { font-family: var(--font-body); font-size: var(--small-size); font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent-purple); margin-bottom: clamp(0.3rem, 0.7vw, 0.55rem); }
+.section-title { font-family: var(--font-display); font-size: var(--h2-size); font-weight: 800; line-height: 1.15; margin-bottom: clamp(0.3rem, 0.8vw, 0.7rem); }
+.section-title em { font-style: normal; background: linear-gradient(135deg, #a78bfa, #e879f9); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.section-desc { font-size: var(--body-size); color: var(--text-secondary); line-height: 1.65; }
+.center { text-align: center; }
+
+/* ===========================================
+   LAYOUT 1: TITLE / DIVIDER SLIDE (animated blobs)
+   =========================================== */
+.title-slide { background: #0B0015; }
+.title-slide::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 90% 90% at 50% 50%, transparent 40%, rgba(11,0,21,0.6) 100%); pointer-events: none; z-index: 0; }
+.title-slide .slide-content { align-items: center; text-align: center; gap: clamp(0.6rem, 1.5vw, 1.2rem); }
+.title-label { font-size: var(--small-size); font-weight: 500; letter-spacing: 0.35em; text-transform: uppercase; color: rgba(255,255,255,0.6); }
+.title-main { font-family: var(--font-display); font-size: var(--title-size); font-weight: 900; line-height: 1.12; letter-spacing: -0.01em; text-shadow: 0 0 30px rgba(139,92,246,0.3), 0 0 80px rgba(139,92,246,0.15); }
+.title-main em { font-style: normal; display: inline-block; background: linear-gradient(135deg, #a78bfa, #e879f9, #f472b6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; filter: drop-shadow(0 0 25px rgba(217,70,239,0.5)) drop-shadow(0 0 60px rgba(139,92,246,0.3)); }
+.title-accent { width: clamp(40px, 5vw, 56px); height: 3px; background: linear-gradient(90deg, var(--accent-orange), var(--accent-pink)); border-radius: 2px; box-shadow: 0 0 12px rgba(255,153,0,0.4), 0 0 30px rgba(217,70,239,0.2); }
+.title-sub { font-size: var(--subtitle-size); color: rgba(255,255,255,0.68); max-width: min(90vw, 720px); line-height: 1.6; }
+.speaker-info { font-size: var(--subtitle-size); color: rgba(255,255,255,0.7); margin-top: clamp(0.3rem, 0.6vw, 0.5rem); letter-spacing: 0.05em; }
+.blob-canvas { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+.blob { position: absolute; border-radius: 50%; filter: blur(80px); will-change: transform, opacity; }
+@keyframes blob1 { 0% { transform: translate(0,0) scale(1); background: rgba(139,92,246,0.55); } 25% { transform: translate(8vw,-12vh) scale(1.2); background: rgba(217,70,239,0.6); } 50% { transform: translate(-5vw,8vh) scale(0.9); background: rgba(59,130,246,0.5); } 75% { transform: translate(12vw,5vh) scale(1.15); background: rgba(236,72,153,0.55); } 100% { transform: translate(0,0) scale(1); background: rgba(139,92,246,0.55); } }
+@keyframes blob2 { 0% { transform: translate(0,0) scale(1); background: rgba(217,70,239,0.45); } 33% { transform: translate(-10vw,6vh) scale(1.15); background: rgba(139,92,246,0.5); } 66% { transform: translate(6vw,-8vh) scale(0.85); background: rgba(236,72,153,0.45); } 100% { transform: translate(0,0) scale(1); background: rgba(217,70,239,0.45); } }
+@keyframes blob3 { 0% { transform: translate(0,0) scale(1); background: rgba(59,80,200,0.4); } 50% { transform: translate(10vw,10vh) scale(1.2); background: rgba(139,92,246,0.45); } 100% { transform: translate(0,0) scale(1); background: rgba(59,80,200,0.4); } }
+@keyframes blob4 { 0% { transform: translate(0,0) scale(1); background: rgba(236,72,153,0.3); } 50% { transform: translate(-8vw,-6vh) scale(1.1); background: rgba(255,153,0,0.18); } 100% { transform: translate(0,0) scale(1); background: rgba(236,72,153,0.3); } }
+
+/* ===========================================
+   LAYOUT 2: CONTENT LAYOUT (left title + right pill cards)
+   =========================================== */
+.content-layout { display: grid; grid-template-columns: 2fr 3fr; gap: clamp(1.5rem, 4.5vw, 4rem); align-items: center; width: 100%; max-width: min(92vw, 1200px); margin: 0 auto; }
+@media (max-width: 768px) { .content-layout { grid-template-columns: 1fr; } }
+.pill-cards { display: flex; flex-direction: column; gap: clamp(0.35rem, 0.85vw, 0.6rem); }
+.pill-card { display: flex; align-items: center; gap: clamp(0.6rem, 1.2vw, 1rem); padding: clamp(0.55rem, 1.15vw, 0.85rem) clamp(0.8rem, 1.5vw, 1.2rem); background: var(--card-bg); border: 1px solid var(--card-border); border-radius: clamp(10px, 1.2vw, 14px); transition: border-color 0.3s, box-shadow 0.3s; }
+.pill-card:hover { border-color: rgba(139,92,246,0.45); box-shadow: 0 0 25px rgba(139,92,246,0.15); }
+.pill-icon { width: clamp(28px, 3vw, 36px); height: clamp(28px, 3vw, 36px); border-radius: clamp(6px, 0.8vw, 10px); flex-shrink: 0; background: linear-gradient(135deg, rgba(139,92,246,0.2), rgba(217,70,239,0.12)); display: flex; align-items: center; justify-content: center; }
+.pill-icon svg { width: 55%; height: 55%; stroke: var(--accent-purple); fill: none; stroke-width: 2; }
+.pill-text { font-size: var(--body-size); font-weight: 600; line-height: 1.35; }
+.pill-text span { color: var(--text-secondary); font-weight: 400; font-size: var(--small-size); display: block; margin-top: 0.15em; }
+
+/* ===========================================
+   LAYOUT 3: STATS ROW + FEATURE GRID
+   =========================================== */
+.stats-row { display: flex; width: 100%; max-width: min(92vw, 1000px); border: 1px solid var(--card-border); border-radius: clamp(10px, 1.2vw, 14px); background: var(--card-bg); overflow: hidden; margin: 0 auto; }
+.stat-item { flex: 1; text-align: center; padding: clamp(0.5rem, 1.3vw, 1.05rem) clamp(0.4rem, 1vw, 0.9rem); border-right: 1px solid rgba(139,92,246,0.15); }
+.stat-item:last-child { border-right: none; }
+.stat-value { font-family: var(--font-display); font-size: clamp(1.25rem, 3.2vw, 2.4rem); font-weight: 800; line-height: 1.1; background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.stat-label { font-size: var(--small-size); color: var(--text-secondary); letter-spacing: 0.04em; margin-top: 0.2em; }
+.features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(0.4rem, 1vw, 0.7rem); width: 100%; max-width: min(92vw, 1000px); margin: 0 auto; }
+@media (max-width: 768px) { .features-grid { grid-template-columns: 1fr; } }
+.feature-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: clamp(8px, 1vw, 12px); padding: clamp(0.6rem, 1.3vw, 1rem); transition: border-color 0.3s, box-shadow 0.3s; }
+.feature-card:hover { border-color: rgba(139,92,246,0.4); box-shadow: 0 0 25px rgba(139,92,246,0.12); }
+.feat-icon { width: clamp(24px, 2.6vw, 32px); height: clamp(24px, 2.6vw, 32px); border-radius: clamp(5px, 0.7vw, 8px); background: linear-gradient(135deg, rgba(139,92,246,0.18), rgba(217,70,239,0.1)); display: flex; align-items: center; justify-content: center; margin-bottom: clamp(0.25rem, 0.6vw, 0.45rem); color: var(--accent-purple); }
+.feat-icon svg { width: 60%; height: 60%; }
+.feature-card h3 { font-family: var(--font-display); font-size: var(--h3-size); font-weight: 800; margin-bottom: clamp(0.1rem, 0.3vw, 0.2rem); }
+.feature-card p { font-size: var(--small-size); color: var(--text-secondary); line-height: 1.5; }
+
+/* ===========================================
+   LAYOUT 5: PIPELINE COLUMNS
+   =========================================== */
+.pipeline-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: clamp(0.4rem, 1vw, 0.8rem); width: 100%; max-width: min(92vw, 1150px); margin: 0 auto; }
+.pipeline-col { text-align: center; background: rgba(255,255,255,0.02); border-radius: 10px; padding: clamp(0.4rem, 0.9vw, 0.7rem); }
+.pipeline-col-title { font-family: var(--font-display); font-size: var(--body-size); font-weight: 800; margin-bottom: clamp(0.3rem, 0.6vw, 0.5rem); line-height: 1.3; }
+.pipeline-bar { height: clamp(3px, 0.5vw, 5px); border-radius: 3px; margin-bottom: clamp(0.4rem, 0.8vw, 0.6rem); }
+.pipeline-items { display: flex; flex-direction: column; gap: clamp(0.25rem, 0.5vw, 0.4rem); }
+.pipeline-items span { font-size: var(--small-size); color: var(--text-secondary); line-height: 1.35; }
+.pipeline-footer { width: 100%; max-width: min(92vw, 1150px); margin: 0 auto; text-align: center; font-size: var(--small-size); color: var(--text-secondary); letter-spacing: 0.06em; padding-top: clamp(0.5rem, 1vw, 0.8rem); border-top: 1px solid rgba(255,255,255,0.1); }
+@media (max-width: 768px) { .pipeline-row { grid-template-columns: repeat(2, 1fr); } }
+
+/* ===========================================
+   LAYOUT 9: PROCESS FLOW (6 steps)
+   =========================================== */
+.process-row { display: flex; align-items: flex-start; width: 100%; max-width: min(94vw, 1200px); margin: 0 auto; position: relative; }
+.process-step { flex: 1; text-align: center; position: relative; padding: 0 clamp(0.25rem, 0.7vw, 0.55rem); }
+.step-num { width: clamp(34px, 4.2vw, 52px); height: clamp(34px, 4.2vw, 52px); border-radius: 50%; margin: 0 auto clamp(0.4rem, 0.8vw, 0.6rem); display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: var(--h3-size); font-weight: 800; background: linear-gradient(135deg, rgba(139,92,246,0.25), rgba(217,70,239,0.18)); border: 1px solid var(--card-border); position: relative; z-index: 1; box-shadow: 0 0 18px rgba(139,92,246,0.25); }
+.process-step:not(:last-child)::after { content: ''; position: absolute; top: clamp(17px, 2.1vw, 26px); left: calc(50% + clamp(20px, 2.5vw, 30px)); width: calc(100% - clamp(40px, 5vw, 60px)); height: 1px; background: linear-gradient(90deg, rgba(139,92,246,0.45), rgba(217,70,239,0.3)); z-index: 0; }
+.step-title { font-family: var(--font-display); font-size: var(--body-size); font-weight: 800; margin-bottom: clamp(0.15rem, 0.35vw, 0.3rem); line-height: 1.3; }
+.step-desc { font-size: var(--small-size); color: var(--text-secondary); line-height: 1.45; }
+.step-tag { display: inline-block; margin-top: clamp(0.25rem, 0.5vw, 0.4rem); font-size: clamp(0.55rem, 0.8vw, 0.72rem); color: var(--accent-orange); border: 1px solid rgba(255,153,0,0.35); border-radius: 99px; padding: 0.1em 0.6em; }
+@media (max-width: 768px) { .process-row { flex-direction: column; gap: 0.8rem; align-items: center; } .process-step { width: 100%; max-width: 320px; } .process-step:not(:last-child)::after { display: none; } }
+
+/* ===========================================
+   LAYOUT 8: COMPARISON SPLIT
+   =========================================== */
+.compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(0.8rem, 2vw, 1.5rem); width: 100%; max-width: min(92vw, 1100px); margin: 0 auto; }
+.compare-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: clamp(10px, 1.2vw, 16px); padding: clamp(0.9rem, 2vw, 1.6rem); }
+.compare-card-title { font-family: var(--font-display); font-size: var(--h3-size); font-weight: 800; margin-bottom: clamp(0.5rem, 1vw, 0.8rem); display: flex; align-items: center; gap: clamp(0.3rem, 0.6vw, 0.5rem); }
+.compare-dot { width: clamp(8px, 1vw, 12px); height: clamp(8px, 1vw, 12px); border-radius: 50%; flex-shrink: 0; }
+.compare-list { list-style: none; display: flex; flex-direction: column; gap: clamp(0.3rem, 0.7vw, 0.5rem); }
+.compare-list li { font-size: var(--small-size); color: var(--text-secondary); padding-left: clamp(0.8rem, 1.5vw, 1.2rem); position: relative; line-height: 1.5; }
+.compare-list li b { color: var(--text-primary); font-weight: 600; }
+.compare-list li::before { content: ''; position: absolute; left: 0; top: 0.55em; width: clamp(4px, 0.5vw, 6px); height: clamp(4px, 0.5vw, 6px); border-radius: 50%; background: var(--accent-purple); }
+@media (max-width: 768px) { .compare-grid { grid-template-columns: 1fr; } }
+
+/* ===========================================
+   THEMED TABLE
+   =========================================== */
+.table-wrap { width: 100%; max-width: min(94vw, 1150px); margin: 0 auto; border: 1px solid var(--card-border); border-radius: clamp(10px, 1.2vw, 14px); overflow: hidden; background: rgba(139,92,246,0.04); }
+table.themed { width: 100%; border-collapse: collapse; font-size: var(--small-size); }
+table.themed th { text-align: left; font-family: var(--font-display); font-weight: 800; letter-spacing: 0.03em; padding: clamp(0.35rem, 0.8vw, 0.6rem) clamp(0.5rem, 1vw, 0.9rem); background: linear-gradient(90deg, rgba(139,92,246,0.22), rgba(217,70,239,0.12)); color: #fff; }
+table.themed td { padding: clamp(0.3rem, 0.7vw, 0.52rem) clamp(0.5rem, 1vw, 0.9rem); border-top: 1px solid rgba(139,92,246,0.14); color: var(--text-secondary); line-height: 1.4; vertical-align: top; }
+table.themed td:first-child { color: var(--text-primary); font-weight: 600; white-space: nowrap; }
+table.themed code { font-size: 0.92em; color: #c4b5fd; }
+.ok { color: var(--accent-green) !important; font-weight: 700; }
+.bad { color: #fb7185 !important; font-weight: 700; }
+.warn { color: var(--accent-orange) !important; font-weight: 700; }
+
+/* ===========================================
+   CODE CARDS (custom for this deck)
+   =========================================== */
+.code-grid { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(0.6rem, 1.4vw, 1.1rem); width: 100%; max-width: min(94vw, 1200px); margin: 0 auto; }
+.code-grid.one { grid-template-columns: 1fr; }
+.code-grid.side { grid-template-columns: 3fr 2fr; }
+@media (max-width: 900px) { .code-grid, .code-grid.side { grid-template-columns: 1fr; } }
+.code-card { background: var(--code-bg); border: 1px solid var(--card-border); border-radius: clamp(10px, 1.1vw, 14px); overflow: hidden; box-shadow: 0 0 30px rgba(139,92,246,0.08); }
+.code-head { display: flex; align-items: center; gap: 0.5em; padding: clamp(0.3rem, 0.7vw, 0.5rem) clamp(0.6rem, 1.1vw, 0.9rem); border-bottom: 1px solid rgba(139,92,246,0.18); font-size: var(--small-size); color: var(--text-secondary); }
+.code-head b { color: #fff; font-family: var(--font-display); font-weight: 800; letter-spacing: 0.02em; }
+.code-dots { display: flex; gap: 4px; margin-right: 0.3em; }
+.code-dots i { width: 7px; height: 7px; border-radius: 50%; display: block; background: rgba(255,255,255,0.18); }
+.code-dots i:first-child { background: #fb7185; } .code-dots i:nth-child(2) { background: #fbbf24; } .code-dots i:nth-child(3) { background: #34d399; }
+pre.code { margin: 0; padding: clamp(0.5rem, 1vw, 0.85rem) clamp(0.6rem, 1.1vw, 0.95rem); font-family: var(--font-mono); font-size: var(--code-size); line-height: 1.55; color: #e9e3ff; white-space: pre; overflow: hidden; }
+pre.code .c { color: rgba(255,255,255,0.38); }     /* comment */
+pre.code .k { color: #f0abfc; }                    /* command / keyword */
+pre.code .s { color: #86efac; }                    /* string */
+pre.code .f { color: #fdba74; }                    /* flag */
+.pit-list { list-style: none; display: flex; flex-direction: column; gap: clamp(0.3rem, 0.7vw, 0.5rem); padding: clamp(0.5rem, 1vw, 0.85rem) clamp(0.7rem, 1.2vw, 1rem); }
+.pit-list li { font-size: var(--small-size); color: var(--text-secondary); line-height: 1.45; padding-left: 1.3em; position: relative; }
+.pit-list li::before { content: '!'; position: absolute; left: 0; top: 0; width: 1em; height: 1em; font-size: 0.8em; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(255,153,0,0.2); color: var(--accent-orange); font-weight: 800; margin-top: 0.15em; }
+.pit-list li b { color: #fff; font-weight: 600; }
+
+
+/* ===========================================
+   DOC LINKS (AWS 官方文档)
+   =========================================== */
+.doc-links { display: flex; flex-wrap: wrap; justify-content: center; gap: clamp(0.3rem, 0.7vw, 0.55rem); width: 100%; max-width: min(94vw, 1200px); margin: 0 auto; }
+.doc-link { display: inline-flex; align-items: center; gap: 0.4em; font-size: var(--small-size); color: #c4b5fd; text-decoration: none; border: 1px solid rgba(139,92,246,0.3); border-radius: 99px; padding: 0.2em 0.8em; background: rgba(139,92,246,0.06); transition: border-color 0.3s, color 0.3s; }
+.doc-link:hover { border-color: var(--accent-pink); color: #fff; }
+.doc-link svg { width: 1em; height: 1em; }
+.doc-group h3 { font-family: var(--font-display); font-size: var(--h3-size); font-weight: 800; margin-bottom: clamp(0.3rem, 0.7vw, 0.5rem); display: flex; align-items: center; gap: 0.4em; }
+.doc-group ul { list-style: none; display: flex; flex-direction: column; gap: clamp(0.2rem, 0.45vw, 0.35rem); }
+.doc-group li a { font-size: var(--small-size); color: var(--text-secondary); text-decoration: none; line-height: 1.45; }
+.doc-group li a:hover { color: #fff; }
+.doc-group li a b { color: #fff; font-weight: 600; }
+.doc-group li a code { font-size: 0.85em; color: #a78bfa; }
+
+
+/* ===========================================
+   SCREENSHOTS · placeholder（截图缺失时显示待补框）· lightbox
+   =========================================== */
+.shot-grid { display: grid; gap: clamp(0.5rem, 1.2vw, 0.9rem); width: 100%; max-width: min(94vw, 1200px); margin: 0 auto; }
+.shot-grid.g3 { grid-template-columns: repeat(3, 1fr); }
+.shot-grid.g2 { grid-template-columns: repeat(2, 1fr); }
+@media (max-width: 900px) { .shot-grid.g3, .shot-grid.g2 { grid-template-columns: 1fr 1fr; } }
+.shot { position: relative; background: var(--code-bg); border: 1px solid var(--card-border); border-radius: clamp(8px, 1vw, 12px); overflow: hidden; display: flex; flex-direction: column; }
+.shot img { width: 100%; height: clamp(100px, 22vh, 250px); max-height: none; object-fit: cover; object-position: top left; cursor: zoom-in; display: block; }
+.shot.tall img { height: clamp(130px, 29vh, 340px); }
+.shot figcaption { font-size: var(--small-size); color: var(--text-secondary); padding: clamp(0.3rem, 0.6vw, 0.45rem) clamp(0.5rem, 0.9vw, 0.75rem); border-top: 1px solid rgba(139,92,246,0.15); line-height: 1.4; }
+.shot figcaption b { color: #fff; font-weight: 600; }
+.shot .ph { display: none; height: clamp(110px, 24vh, 260px); align-items: center; justify-content: center; flex-direction: column; gap: 0.3em; text-align: center; padding: 0.6rem; border: 1px dashed rgba(255,153,0,0.45); margin: 0.5rem; border-radius: 8px; color: var(--accent-orange); font-size: var(--small-size); }
+.shot .ph code { color: rgba(255,255,255,0.55); font-size: 0.85em; }
+.shot.missing img { display: none; }
+.shot.missing .ph { display: flex; }
+.lightbox { position: fixed; inset: 0; background: rgba(5,0,15,0.92); display: none; align-items: center; justify-content: center; z-index: 2000; cursor: zoom-out; }
+.lightbox.open { display: flex; }
+.lightbox img { max-width: 94vw; max-height: 90vh; border-radius: 10px; box-shadow: 0 0 60px rgba(139,92,246,0.35); }
+
+/* ===========================================
+   CHROME: PROGRESS BAR · NAV DOTS · FOOTER · PAGE NUMBER
+   =========================================== */
+.progress-bar { position: fixed; top: 0; left: 0; height: 3px; width: 0; background: linear-gradient(90deg, var(--accent-purple), var(--accent-pink), var(--accent-orange)); z-index: 1000; transition: width 0.3s; }
+.nav-dots { position: fixed; right: clamp(8px, 1.5vw, 20px); top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 8px; z-index: 1000; }
+.nav-dots button { width: 8px; height: 8px; border-radius: 50%; border: none; background: rgba(255,255,255,0.25); cursor: pointer; transition: all 0.3s; }
+.nav-dots button.active { background: var(--accent-pink); box-shadow: 0 0 10px var(--accent-pink); transform: scale(1.3); }
+.slide-footer { position: fixed; bottom: clamp(8px, 1.2vh, 16px); left: clamp(12px, 2vw, 24px); z-index: 999; font-size: clamp(0.6rem, 1vw, 0.8rem); letter-spacing: 0.02em; color: rgba(255,255,255,0.5); }
+.page-number { position: fixed; bottom: clamp(8px, 1.2vh, 16px); right: clamp(12px, 2vw, 24px); z-index: 999; font-family: var(--font-body); font-size: clamp(0.6rem, 0.9vw, 0.75rem); letter-spacing: 0.05em; color: rgba(255,255,255,0.35); font-variant-numeric: tabular-nums; }
+@media (max-height: 600px) { .slide-footer, .page-number { display: none; } }
+</style>
+</head>
+<body>
+
+<div class="progress-bar" id="progressBar"></div>
+<nav class="nav-dots" id="navDots"></nav>
+<div class="slide-footer">&copy; 2026, Amazon Web Services, Inc. or its affiliates. All rights reserved.</div>
+<div class="page-number" id="pageNumber">1</div>
+<div class="lightbox" id="lightbox"><img alt=""></div>
+
+<!-- ============ 1. TITLE ============ -->
+<section class="slide title-slide">
+    <div class="blob-canvas">
+        <div class="blob" style="width:55vw;height:55vw;top:-10%;left:40%;animation:blob1 12s ease-in-out infinite;"></div>
+        <div class="blob" style="width:50vw;height:50vw;bottom:-5%;left:-10%;animation:blob2 15s ease-in-out infinite;"></div>
+        <div class="blob" style="width:40vw;height:40vw;top:20%;left:10%;animation:blob3 18s ease-in-out infinite;"></div>
+        <div class="blob" style="width:35vw;height:35vw;bottom:10%;right:5%;animation:blob4 20s ease-in-out infinite;"></div>
+    </div>
+    <div class="slide-content">
+        <div class="title-label reveal d1">Amazon Bedrock AgentCore · CloudWatch</div>
+        <h1 class="title-main reveal d2">从上线到<br><em>有证据地变好</em></h1>
+        <div class="title-accent reveal d3"></div>
+        <p class="title-sub reveal d4">Agent 评估改进闭环：可观测性 → 数据集 → 评估 → 分类 → 改进 → 分阶段确认<br>两种做法：CloudWatch 标准版（AWS CLI）与 Omni 版（IDE + MCP）</p>
+        <p class="speaker-info reveal d5" id="speakerInfo"></p>
+    </div>
+</section>
+
+<!-- ============ 2. WHY ============ -->
+<section class="slide content-slide">
+    <div class="floating-orb orb-purple" style="width:30vw;height:30vw;top:8%;right:5%;animation:orbFloat2 15s ease-in-out infinite;"></div>
+    <div class="floating-orb orb-pink" style="width:22vw;height:22vw;bottom:12%;left:3%;animation:orbFloat3 17s ease-in-out infinite;"></div>
+    <div class="slide-content">
+        <div class="content-layout">
+            <div>
+                <div class="section-label reveal d1">Why</div>
+                <h2 class="section-title reveal d2">Agent 的问题<br><em>大多不报错</em></h2>
+                <p class="section-desc reveal d3">一个电商售后 agent，HTTP 200、回答流畅，但结论是错的。没有可观测性看不到错在哪；没有评估不知道改了有没有用；没有门禁不知道改了会不会更糟。</p>
+            </div>
+            <div class="pill-cards">
+                <div class="pill-card reveal d2"><div class="pill-icon"><i data-lucide="calculator"></i></div>
+                    <div class="pill-text">金额算错<span>券分摊、折旧费基数、舍入 —— 模型在心算</span></div></div>
+                <div class="pill-card reveal d3"><div class="pill-icon"><i data-lucide="calendar-x"></i></div>
+                    <div class="pill-text">超窗口仍暗示「可以退」<span>ORD-10008 已过 28 天，被答成可以退货</span></div></div>
+                <div class="pill-card reveal d4"><div class="pill-icon"><i data-lucide="git-branch-plus"></i></div>
+                    <div class="pill-text">没查政策先开退货单<span>不可逆动作发生在校验之前</span></div></div>
+                <div class="pill-card reveal d5"><div class="pill-icon"><i data-lucide="activity"></i></div>
+                    <div class="pill-text">测量本身也有噪声<span>同一个 prompt，Correctness 在批次间从 0.65 摆到 0.80</span></div></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============ 3. SIX STEPS ============ -->
+<section class="slide process-slide">
+    <div class="floating-orb orb-purple" style="width:24vw;height:24vw;bottom:15%;right:5%;animation:orbFloat1 16s ease-in-out infinite;"></div>
+    <div class="slide-content" style="align-items:center;gap:var(--content-gap);">
+        <div class="section-label reveal d1 center">The Loop</div>
+        <h2 class="section-title reveal d2 center">六步闭环，<em>每步都有停点</em></h2>
+        <div class="process-row">
+            <div class="process-step reveal d2"><div class="step-num">1</div><div class="step-title">创建 Agent<br>开启可观测性</div><div class="step-desc">Transaction Search · ADOT · 验证三类 span</div><span class="step-tag">GenAI Observability</span></div>
+            <div class="process-step reveal d3"><div class="step-num">2</div><div class="step-title">CDK 部署<br>配置评估</div><div class="step-desc">agent stack + eval stack，标尺在开始前定好</div><span class="step-tag">Online Evaluation</span></div>
+            <div class="process-step reveal d4"><div class="step-num">3</div><div class="step-title">建数据集<br>按用途分组</div><div class="step-desc">确定性标准答案；control / confirm 互不相交</div><span class="step-tag">AgentCore Dataset</span></div>
+            <div class="process-step reveal d5"><div class="step-num">4</div><div class="step-title">跑基线<br>测出噪声</div><div class="step-desc">多个独立批次 · A/A 校准 · 登记门禁</div><span class="step-tag">Batch Evaluation</span></div>
+            <div class="process-step reveal d6"><div class="step-num">5</div><div class="step-title">找关键问题<br>只改一层</div><div class="step-desc">失败分类 → 人工复核 → 独立 runtime 候选</div><span class="step-tag">Insights</span></div>
+            <div class="process-step reveal d7"><div class="step-num">6</div><div class="step-title">分阶段确认<br>再上线</div><div class="step-desc">S0 → S1 → S2 灰度 → 人工确认 + 回滚</div><span class="step-tag">Staged Gates</span></div>
+        </div>
+    </div>
+</section>
+
+<!-- ============ 4. STEP 1-2 ============ -->
+<section class="slide">
+    <div class="floating-orb orb-blue" style="width:26vw;height:26vw;top:10%;left:62%;animation:orbFloat1 16s ease-in-out infinite;"></div>
+    <div class="slide-content" style="gap:var(--content-gap);">
+        <div class="section-label reveal d1 center">Step 1 – 2</div>
+        <h2 class="section-title reveal d2 center">可观测性先行，<em>标尺在开始前定好</em></h2>
+        <div class="features-grid">
+            <div class="feature-card reveal d3"><div class="feat-icon"><i data-lucide="search"></i></div><h3>Transaction Search</h3>
+                <p><code>logs put-resource-policy</code>（授权 X-Ray 写 <code>aws/spans</code>）→ <code>xray update-trace-segment-destination</code> → 设置索引比例。1% 免费；做评估需要完整 trace 时用 100%，注意成本。</p></div>
+            <div class="feature-card reveal d4"><div class="feat-icon"><i data-lucide="radar"></i></div><h3>ADOT 自动埋点</h3>
+                <p>AgentCore CLI 部署时自动埋点；CDK + Direct Code Deploy 则在包里带 <code>aws-opentelemetry-distro</code>，entrypoint 用 <code>opentelemetry-instrument agent.py</code>。不改业务代码。</p></div>
+            <div class="feature-card reveal d5"><div class="feat-icon"><i data-lucide="check-check"></i></div><h3>先验证再往下走</h3>
+                <p>发 1 条请求，确认 <code>invoke_agent</code> / <code>execute_tool</code> / <code>chat</code> 三类 span 都落地（本例 13 个）。没开 Transaction Search 不会报错，只是后面全是 0 条。</p></div>
+            <div class="feature-card reveal d4"><div class="feat-icon"><i data-lucide="boxes"></i></div><h3>CDK：agent stack</h3>
+                <p>AgentCore Runtime + endpoint + IAM role；<code>tracingEnabled</code>；固定「今天」等环境变量，让标准答案可复现。</p></div>
+            <div class="feature-card reveal d5"><div class="feat-icon"><i data-lucide="gauge"></i></div><h3>CDK：eval stack</h3>
+                <p>自定义 LLM-as-judge evaluator + Online Evaluation Config（线上流量 100% 自动打分）。<b>它就是 run 之前冻结的标尺。</b></p></div>
+            <div class="feature-card reveal d6"><div class="feat-icon"><i data-lucide="triangle-alert"></i></div><h3>先查尺子</h3>
+                <p>用 <code>get-evaluator</code> 读真实值域（曾把 [0,1] 误记为 [0,6]）；生产里有没有 safety evaluator；在线评估只覆盖它配置的那个 runtime。</p></div>
+        </div>
+        <div class="doc-links reveal d7"><a class="doc-link" href="https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/observability-get-started.html" target="_blank" rel="noopener"><i data-lucide="book-open"></i>Get started with Observability</a><a class="doc-link" href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-Transaction-Search.html" target="_blank" rel="noopener"><i data-lucide="book-open"></i>Transaction Search</a><a class="doc-link" href="https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/observability-configure.html" target="_blank" rel="noopener"><i data-lucide="book-open"></i>Add observability</a><a class="doc-link" href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/GenAI-observability.html" target="_blank" rel="noopener"><i data-lucide="book-open"></i>GenAI observability</a></div>
+    </div>
+</section>
+
+<!-- ============ 4b. TWO KINDS OF EVALUATION ============ -->
+<section class="slide">
+    <div class="floating-orb orb-purple" style="width:26vw;height:26vw;top:8%;right:6%;animation:orbFloat2 16s ease-in-out infinite;"></div>
+    <div class="slide-content" style="gap:var(--content-gap);">
+        <div class="section-label reveal d1 center">Step 2 · Evaluation</div>
+        <h2 class="section-title reveal d2 center">默认评估 + 批量评估，<em>各管一段</em></h2>
+        <div class="table-wrap reveal d3">
+            <table class="themed">
+                <tr><th></th><th>默认评估 · Online Evaluation（CDK eval stack）</th><th>批量评估 · Batch Evaluation</th></tr>
+                <tr><td>何时打分</td><td>持续、自动；session 空闲 15 分钟后</td><td>按需，指定 session / 时间窗</td></tr>
+                <tr><td>标准答案</td><td>无 —— 只能判「看起来对不对」</td><td>有 —— 每个 session 注入 groundTruth</td></tr>
+                <tr><td>覆盖范围</td><td>只覆盖它配置的那个 runtime（log group + serviceName）</td><td>任意 runtime</td></tr>
+                <tr><td>用途</td><td>生产监控 · 诊断来源 · <b>S2 灰度的唯一评分</b></td><td>离线实验：S0 / S1 的配对比较</td></tr>
+                <tr><td>本次实测</td><td>baseline 被覆盖 <b>121</b> 个 session；候选最初 <b class="bad">0</b>（CDK 只给 baseline 建了）→ 已改为候选 stack 同时部署默认评估</td><td>全部 S0 / S1 结论</td></tr>
+            </table>
+        </div>
+        <div class="code-grid one reveal d4">
+            <div class="code-card">
+                <div class="code-head"><span class="code-dots"><i></i><i></i><i></i></span><b>CDK · 每个 runtime 都带一份默认评估</b>&nbsp;候选 stack 与 baseline 共用同一份 evaluator 列表</div>
+<pre class="code"><span class="c">// cdk/lib/eval-stack.ts —— baseline 与每个候选 stack 共用</span>
+<span class="k">new</span> agentcore.OnlineEvaluationConfig(<span class="k">this</span>, <span class="s">'OnlineEval'</span>, {
+  onlineEvaluationConfigName: <span class="s">`${runId}_${variant}_online`</span>,
+  dataSource: agentcore.DataSourceConfig.<span class="k">fromAgentRuntimeEndpoint</span>(runtime, endpoint),
+  evaluators: <span class="k">productionEvaluators</span>(policyGrounding),   <span class="c">// 质量 4 · 工具 2 · 会话 1 · 自定义 1</span>
+  samplingPercentage: <span class="s">100</span> });
+<span class="k">npx cdk deploy</span> selfevolve-demo-agent-t1 selfevolve-demo-eval-t1   <span class="c"># 同一次部署</span></pre>
+            </div>
+        </div>
+        <div class="doc-links reveal d7"><a class="doc-link" href="https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/online-evaluations.html" target="_blank" rel="noopener"><i data-lucide="book-open"></i>Online evaluation</a><a class="doc-link" href="https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/create-online-evaluations.html" target="_blank" rel="noopener"><i data-lucide="book-open"></i>Create online evaluation</a><a class="doc-link" href="https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/batch-evaluations.html" target="_blank" rel="noopener"><i data-lucide="book-open"></i>Batch evaluation</a><a class="doc-link" href="https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/ground-truth-evaluations.html" target="_blank" rel="noopener"><i data-lucide="book-open"></i>Ground truth evaluations</a></div>
+    </div>
+</section>
+
+<!-- ============ 5. STEP 3-4 ============ -->
+<section class="slide">
+    <div class="floating-orb orb-pink" style="width:22vw;height:22vw;top:8%;right:8%;animation:orbFloat3 17s ease-in-out infinite;"></div>
+    <div class="slide-content" style="align-items:center;gap:var(--content-gap);">
+        <div class="section-label reveal d1 center">Step 3 – 4</div>
+        <h2 class="section-title reveal d2 center">数据集按用途分组，<em>基线先测出噪声</em></h2>
+        <div class="pipeline-row">
+            <div class="pipeline-col reveal d2"><div class="pipeline-col-title">确定性标准答案</div><div class="pipeline-bar" style="background:linear-gradient(90deg,#3b82f6,#6366f1);"></div>
+                <div class="pipeline-items"><span>由规则 / 纯函数算出（与 agent 同一套算法）</span><span>绝不复制线上回答当答案</span></div></div>
+            <div class="pipeline-col reveal d3"><div class="pipeline-col-title">按用途分组</div><div class="pipeline-bar" style="background:linear-gradient(90deg,#6366f1,#8b5cf6);"></div>
+                <div class="pipeline-items"><span>eligible → control / holdout</span><span>+ 单独构建的 verify</span><span>详见下一页</span></div></div>
+            <div class="pipeline-col reveal d4"><div class="pipeline-col-title">多个独立批次</div><div class="pipeline-bar" style="background:linear-gradient(90deg,#8b5cf6,#a855f7);"></div>
+                <div class="pipeline-items"><span>同一时段内的重复高度相关</span><span>baseline × 4 批，统计 k/4</span><span>≥3/4 才算系统性失败</span></div></div>
+            <div class="pipeline-col reveal d5"><div class="pipeline-col-title">A/A 校准</div><div class="pipeline-bar" style="background:linear-gradient(90deg,#a855f7,#d946ef);"></div>
+                <div class="pipeline-items"><span>同一 prompt 两组批次互相比较</span><span>Δ 的 95% CI ≈ ±0.09</span><span>token 差 10%、延迟差 6%</span></div></div>
+            <div class="pipeline-col reveal d6"><div class="pipeline-col-title">登记门禁</div><div class="pipeline-bar" style="background:linear-gradient(90deg,#d946ef,#ec4899);"></div>
+                <div class="pipeline-items"><span>门槛 = 噪声 + 分辨率 + 业务预算</span><span>早于任何候选结果</span><span>不可达时当场报警</span></div></div>
+        </div>
+        <div class="pipeline-footer reveal d7">样本量按要分辨的差异反推：n ≈ (1.96σ / 边界)² · σ≈0.155 时分辨 ±0.05 约需 37 题，±0.03 约需 100 题</div>
+        <div class="doc-links reveal d6"><a class="doc-link" href="https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/dataset-evaluations.html" target="_blank" rel="noopener"><i data-lucide="book-open"></i>Dataset evaluation</a><a class="doc-link" href="https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/dataset-evaluations-schema.html" target="_blank" rel="noopener"><i data-lucide="book-open"></i>Dataset schema</a><a class="doc-link" href="https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/dataset-evaluations-batch.html" target="_blank" rel="noopener"><i data-lucide="book-open"></i>Batch dataset runner</a></div>
+    </div>
+</section>
+
+<!-- ============ 5b. DATASET GROUPS ============ -->
+<section class="slide">
+    <div class="floating-orb orb-blue" style="width:24vw;height:24vw;top:6%;left:66%;animation:orbFloat3 17s ease-in-out infinite;"></div>
+    <div class="slide-content" style="gap:clamp(0.4rem,1.3vw,1.1rem);">
+        <div class="section-label reveal d1 center">Step 3 · 按用途分组</div>
+        <h2 class="section-title reveal d2 center">四组数据，<em>谁能看、什么时候用</em>都要事先定</h2>
+        <div class="table-wrap reveal d3">
+            <table class="themed">
+                <tr><th>组</th><th>从哪来</th><th>用来做什么</th><th>谁能看 / 何时看</th><th style="white-space:nowrap">Omni run · CLI demo</th></tr>
+                <tr><td>eligible<br><span style="font-weight:400;color:var(--text-secondary)">合格池</span></td><td>生产 trace 里能对上标准答案的样本（有输入、有回答、有 scenario_id）</td><td>只做盘点和切分的来源，<b>不直接参与任何决策</b></td><td>—</td><td>35 · —</td></tr>
+                <tr><td>control</td><td>eligible 中稳定哈希 ≥ 30% 的部分</td><td>重复采样诊断 · 决定改哪一层 · 设计候选 · <b>S0</b> 配对比较</td><td>人和 agent 都可以反复看</td><td>28 · 20</td></tr>
+                <tr><td>holdout</td><td>eligible 中稳定哈希 &lt; 30% 的部分（与 control 同分布）</td><td><b>S1</b>：只测领先的那一个候选，检验「换一批同类题还成立吗」</td><td>切分后封存；设计候选时<b>不看</b></td><td>7 · <span class="warn">未切</span></td></tr>
+                <tr><td>verify</td><td>单独构建、订单区间与前三组不相交（本次 fresh / verify 集）</td><td><b>S1 最终确认</b> · 候选冻结后的新数据，抓过拟合</td><td>出结果前登记标准；<b>只跑一次</b>，不替换</td><td>20 · 20+20</td></tr>
+            </table>
+        </div>
+        <div class="features-grid">
+            <div class="feature-card reveal d4"><div class="feat-icon"><i data-lucide="hash"></i></div><h3>切分是纯函数</h3><p><code>blake2b(scenario_id)</code> 落在最低 30% 进 holdout —— 重跑结果相同，不能「重摇到候选通过」。</p></div>
+            <div class="feature-card reveal d5"><div class="feat-icon"><i data-lucide="ruler"></i></div><h3>样本量事先算</h3><p>按「比例 + 最少条数」双约束；本次 holdout 只有 7 条，确认集扩到 40 条才够 S1。不够就等流量，不降门槛。</p></div>
+            <div class="feature-card reveal d6"><div class="feat-icon"><i data-lucide="layers"></i></div><h3>一组一个 Dataset</h3><p>每组注册为独立的 AgentCore Dataset 并打不可变版本；评估结论引用「dataset id + 版本」。</p></div>
+        </div>
+    </div>
+</section>
+
+<!-- ============ INSIGHTS A: WHAT ============ -->
+<section class="slide">
+    <div class="floating-orb orb-purple" style="width:24vw;height:24vw;top:6%;right:5%;animation:orbFloat1 16s ease-in-out infinite;"></div>
+    <div class="slide-content" style="gap:clamp(0.4rem,1.2vw,1rem);">
+        <div class="section-label reveal d1 center">Step 5 · Insights ①</div>
+        <h2 class="section-title reveal d2 center">Insights：不打分，<em>读完一批 trace 再归纳</em></h2>
+        <div class="code-grid side" style="align-items:start;">
+            <div class="reveal d3">
+                <div class="table-wrap">
+                    <table class="themed">
+                        <tr><th>页签</th><th>回答的问题</th><th>本次（baseline × control，80 session）</th></tr>
+                        <tr><td>Failure analysis</td><td>哪里失败、为什么</td><td>政策理解与计算错误 <b>20/80</b> · 工具参数与执行失败 <b>9/80</b></td></tr>
+                        <tr><td>User intents</td><td>用户在问什么</td><td>15 类：质量问题退货 8 · 退货问运费 8 · 部分退货 4 …</td></tr>
+                        <tr><td>Execution summaries</td><td>agent 实际怎么做</td><td>12 条处理路径</td></tr>
+                    </table>
+                </div>
+                <div class="code-card" style="margin-top:clamp(0.4rem,1vw,0.8rem);">
+                    <div class="code-head"><span class="code-dots"><i></i><i></i><i></i></span><b>Execution summary 示例</b>&nbsp;Refund Eligibility Assessment and Amount Calculation（16 session）</div>
+                    <ul class="pit-list">
+                        <li><b>路径</b>：取订单 → 取政策 → 比较天数与窗口 → 按品类规则算折旧费 / 运费 → 给明细与下一步</li>
+                        <li><b>读出 ①</b>：主流路径是「模型自己算」—— Tool 层问题的温床</li>
+                        <li><b>读出 ②</b>：结尾主动引导开退货单 —— 与「未核验资格就 create_return_label」对得上</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="reveal d4"><figure class="shot tall"><img src="assets/cw-06-insights.png" alt="" loading="lazy" onerror="this.parentElement.classList.add('missing')"><figcaption><b>控制台</b> · AgentCore → Optimizations → Insights</figcaption></figure>
+                <p class="section-desc" style="font-size:var(--small-size);margin-top:0.5rem;"><code>start-batch-evaluation --insights Builtin.Insight.FailureAnalysis / UserIntent / ExecutionSummary</code> · 不能与 evaluators 同批 · log group 必须含 <code>aws/spans</code></p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============ INSIGHTS B: HIERARCHY + HOW FAR ============ -->
+<section class="slide">
+    <div class="floating-orb orb-pink" style="width:22vw;height:22vw;bottom:6%;left:4%;animation:orbFloat3 17s ease-in-out infinite;"></div>
+    <div class="slide-content" style="gap:clamp(0.4rem,1.2vw,1rem);">
+        <div class="section-label reveal d1 center">Step 5 · Insights ②</div>
+        <h2 class="section-title reveal d2 center">从失败大类<em>一直定位到 span</em>，但「怎么改」只给到方向</h2>
+        <div class="code-grid">
+            <div class="code-card reveal d3">
+                <div class="code-head"><span class="code-dots"><i></i><i></i><i></i></span><b>Failure analysis 层级</b>&nbsp;括号内为受影响 session</div>
+<pre class="code"><span class="k">大类</span> Policy Misinterpretation and Calculation Errors   <span class="s">20/80</span>
+ ├ <span class="k">子类</span> Logic Contradiction                          <span class="s">12</span>
+ │  ├ 根因 Eligibility Verification Before Tool Call   <span class="s">8</span>
+ │  └ 根因 Return vs. Exchange Window Confusion         <span class="s">4</span>
+ ├ <span class="k">子类</span> Coupon Proration and Refund Calculation       <span class="s">5</span>
+ └ <span class="k">子类</span> Return Type Misclassification → Shipping     <span class="s">3</span>
+<span class="k">大类</span> Incomplete Tool Parameters / Execution Failures  <span class="s">9/80</span>
+<span class="c"># 每个 session：explanation · 出错的 span · 分类 · 证据 · 置信度
+#   prod_005 · span a29f33bc：已说明超出 30 天窗口，却说「仍可为您处理」
+#   并调用 create_return_label · hall-misunderstand · 0.9</span></pre>
+            </div>
+            <div class="reveal d4">
+                <div class="table-wrap">
+                    <table class="themed">
+                        <tr><th>输出</th><th>给了什么</th><th>能直接用吗</th></tr>
+                        <tr><td><code>fixType</code></td><td>改哪一层</td><td class="warn">只作参考：27 个根因 26 个是 SYSTEM_PROMPT_FIX，连「券分摊算错」也是</td></tr>
+                        <tr><td><code>recommendation</code></td><td>方向性文字（「在 prompt 中加入分步计算流程…」）</td><td class="warn">不能：只说改什么，没给改好的内容</td></tr>
+                        <tr><td>Create recommendation</td><td>改写好的 prompt / 工具描述（<code>start-recommendation</code>）</td><td>可作候选，须对照政策审核</td></tr>
+                    </table>
+                </div>
+                <ul class="pit-list" style="padding-left:0;">
+                    <li><b>有随机性</b>：同样 80 个 session 跑两次，聚类结构不同 —— 看大类排序，不看精确条数</li>
+                    <li><b>不知道标准答案</b>：是否真错，以带 groundTruth 的 Correctness 为准</li>
+                </ul>
+            </div>
+        </div>
+        <div class="doc-links reveal d5"><a class="doc-link" href="https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/batch-evaluations-insights.html" target="_blank" rel="noopener"><i data-lucide="book-open"></i>Insights in batch evaluation</a><a class="doc-link" href="https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/optimization-recommendations.html" target="_blank" rel="noopener"><i data-lucide="book-open"></i>Recommendations</a></div>
+    </div>
+</section>
+
+<!-- ============ INSIGHTS C: HOW WE DECIDED ============ -->
+<section class="slide process-slide">
+    <div class="floating-orb orb-blue" style="width:24vw;height:24vw;top:8%;left:62%;animation:orbFloat2 16s ease-in-out infinite;"></div>
+    <div class="slide-content" style="align-items:center;gap:clamp(0.4rem,1.3vw,1.1rem);">
+        <div class="section-label reveal d1 center">Step 5 · Insights ③</div>
+        <h2 class="section-title reveal d2 center">同一批根因，<em>为什么先改 Prompt、再改 Tool</em></h2>
+        <div class="compare-grid">
+            <div class="compare-card reveal d3">
+                <div class="compare-card-title"><div class="compare-dot" style="background:#fb7185;"></div>第 1 轮 · p1（Prompt）· FAIL</div>
+                <ul class="compare-list">
+                    <li><b>依据</b>：最大子类「逻辑矛盾 / 资格判断」12 个 session；系统性失败 prod_005 / prod_008 是「超窗口仍暗示可退」—— 工具数据对、模型判断错</li>
+                    <li><b>改法</b>：v1 后追加两句：只给一个结论、不暗示例外；可退款时写出逐件金额与合计</li>
+                    <li><b>命中</b>：prod_008 3/4→0/4 · prod_014 3/4→0/4 · prod_005 3→1</li>
+                    <li><b>副作用</b>：prod_001 0→3 · prod_018 1→3 · prod_010 0→2 —— 全是金额计算；Correctness 失败 23→23</li>
+                </ul>
+            </div>
+            <div class="compare-card reveal d4">
+                <div class="compare-card-title"><div class="compare-dot" style="background:var(--accent-green);"></div>第 2 轮 · t1（Tool）· 通过 S0 / S1</div>
+                <ul class="compare-list">
+                    <li><b>依据（不是 fixType）</b>：出错的是「模型自己做确定性计算」—— 窗口比较、券分摊、折旧费基数、运费；Execution summary 显示 16 个 session 的主流路径正是如此</li>
+                    <li><b>改法</b>：prompt 不变，打开 <code>AGENT_TOOL_TIER=enhanced</code>，由工具直接返回资格与金额</li>
+                    <li><b>结果</b>：Correctness 失败 23→<b>13</b>；系统性失败场景全部 0/4</li>
+                    <li><b>确认</b>：40 道未用于挑选的题，对照 b0，Δ <b>+0.162</b>，95% CI [+0.083, +0.243]；代价 token +56%</li>
+                </ul>
+            </div>
+        </div>
+        <div class="pipeline-footer reveal d5">insights 定「修什么」 → 多批次普遍性定「真不真」 → 点进 span 定「改哪层」 → 事先登记的门禁定「改没改好」</div>
+    </div>
+</section>
+
+<!-- ============ 6. STEP 5 ============ -->
+<section class="slide">
+    <div class="floating-orb orb-purple" style="width:28vw;height:28vw;bottom:5%;left:60%;animation:orbFloat2 16s ease-in-out infinite;"></div>
+    <div class="slide-content" style="gap:var(--content-gap);">
+        <div class="section-label reveal d1 center">Step 5</div>
+        <h2 class="section-title reveal d2 center">先判断<em>该改哪一层</em>，每轮只改一层</h2>
+        <div class="table-wrap reveal d3">
+            <table class="themed">
+                <tr><th>trace 里看到的信号</th><th>层</th><th>本例</th></tr>
+                <tr><td>工具数据正确，结论矛盾 / 不完整</td><td>Prompt</td><td>破损全额退款只说「全额」不给金额</td></tr>
+                <tr><td>模型自己做日期 / 金额 / 规则计算并出错</td><td>Tool（让工具直接返回结果）</td><td>券分摊、折旧费基数 —— insight 会标成 <code>SYSTEM_PROMPT_FIX</code>，需人工复核</td></tr>
+                <tr><td>必须先做的步骤被跳过（尤其不可逆动作前）</td><td>Workflow</td><td>没查政策就 <code>create_return_label</code></td></tr>
+                <tr><td>选错工具、参数错</td><td>Tool 描述 / schema</td><td>ToolSelectionAccuracy 低</td></tr>
+                <tr><td>只影响一类任务，修它需要一大段专用步骤</td><td>Skill</td><td>只影响「部分退货」</td></tr>
+                <tr><td>prompt 有明确指令、跨任务、重复仍违反</td><td>Model</td><td>先排除 prompt 根本没写清楚</td></tr>
+            </table>
+        </div>
+<div class="doc-links reveal d5"><a class="doc-link" href="https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/batch-evaluations-insights.html" target="_blank" rel="noopener"><i data-lucide="book-open"></i>Insights in batch evaluation</a><a class="doc-link" href="https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/optimization-recommendations.html" target="_blank" rel="noopener"><i data-lucide="book-open"></i>Recommendations</a><a class="doc-link" href="https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/recommendations-system-prompt.html" target="_blank" rel="noopener"><i data-lucide="book-open"></i>System prompt recommendation</a></div>
+                <p class="section-desc reveal d4 center">候选部署为<b>独立 runtime</b>（独立 stack / role），与 baseline 只差一个文件或一个开关；CDK 模板 diff 只应出现这一处。</p>
+    </div>
+</section>
+
+<!-- ============ 7. STEP 6 ============ -->
+<section class="slide">
+    <div class="floating-orb orb-blue" style="width:24vw;height:24vw;top:10%;left:5%;animation:orbFloat3 18s ease-in-out infinite;"></div>
+    <div class="slide-content" style="gap:var(--content-gap);">
+        <div class="section-label reveal d1 center">Step 6</div>
+        <h2 class="section-title reveal d2 center">流量越大，<em>门禁越严</em></h2>
+        <div class="table-wrap reveal d3">
+            <table class="themed">
+                <tr><th>阶段</th><th>数据</th><th>样本</th><th>影响范围</th><th>回答的问题</th><th>门禁</th></tr>
+                <tr><td>S0</td><td>control</td><td>≥20 题 × 多批</td><td>无</td><td>值得继续吗</td><td>非劣效（CI 下界 ≥ −边界）</td></tr>
+                <tr><td>S1</td><td>confirm（未用于挑选）</td><td>≥40 题</td><td>无</td><td>没见过的题上不更差</td><td>非劣效，边界更窄</td></tr>
+                <tr><td>S2</td><td>云上灰度 + 在线评估</td><td>≥200 session</td><td>部分用户</td><td>真的更好吗</td><td>CI 下界 ≥ 0 · 成本按预算 · safety 零新增</td></tr>
+                <tr><td>S3</td><td>全量</td><td>全部</td><td>全部</td><td>有无回退</td><td>持续监控 + 自动回滚</td></tr>
+            </table>
+        </div>
+        <div class="features-grid">
+            <div class="feature-card reveal d4"><div class="feat-icon"><i data-lucide="package-check"></i></div><h3>对照组同包重建</h3><p>线上 baseline 的旧包缺少确认集的订单 → 出现 +0.435 的假提升。用当前代码重建对照 arm <code>b0</code>。</p></div>
+            <div class="feature-card reveal d5"><div class="feat-icon"><i data-lucide="file-pen-line"></i></div><h3>校准要留痕</h3><p>看到结果后的调整允许，但记录理由、时间、<code>calibrated_after_results</code>，结局单独标记。</p></div>
+            <div class="feature-card reveal d6"><div class="feat-icon"><i data-lucide="undo-2"></i></div><h3>上线需人确认</h3><p>门禁 PASS + <code>CONFIRM=yes</code>；保留上一版 prompts，一条命令回滚。</p></div>
+        </div>
+    </div>
+</section>
+
+<!-- ============ 8. DIVIDER: CLOUDWATCH ============ -->
+<section class="slide title-slide">
+    <div class="blob-canvas">
+        <div class="blob" style="width:50vw;height:50vw;top:-15%;left:-5%;animation:blob2 14s ease-in-out infinite;"></div>
+        <div class="blob" style="width:45vw;height:45vw;bottom:-10%;right:0;animation:blob1 16s ease-in-out infinite;"></div>
+    </div>
+    <div class="slide-content">
+        <div class="title-label reveal d1">Part 1</div>
+        <h1 class="title-main reveal d2">CloudWatch<br><em>标准版</em></h1>
+        <div class="title-accent reveal d3"></div>
+        <p class="title-sub reveal d4">只用 AWS CLI v2（≥ 2.38）+ CDK + jq + python3 标准库<br>每一步一个脚本，可以交给 coding agent 执行、由人确认</p>
+    </div>
+</section>
+
+<!-- ============ 9. KEY APIS + USAGE ============ -->
+<section class="slide">
+    <div class="floating-orb orb-purple" style="width:22vw;height:22vw;top:6%;right:6%;animation:orbFloat2 15s ease-in-out infinite;"></div>
+    <div class="slide-content" style="gap:clamp(0.4rem,1.2vw,1rem);">
+        <div class="section-label reveal d1 center">CloudWatch · 关键 API</div>
+        <h2 class="section-title reveal d2 center">用到了哪些 API，<em>本次实际用了多少</em></h2>
+        <div class="table-wrap reveal d3">
+            <table class="themed">
+                <tr><th>步骤</th><th>关键 API</th><th>本次 run cwdemo1</th><th>说明</th></tr>
+                <tr><td>开启可观测性</td><td><code>logs put-resource-policy</code> · <code>xray update-trace-segment-destination</code></td><td>只读核对（账号已开启）</td><td>每个 account + region 一次</td></tr>
+                <tr><td>部署 + 默认评估</td><td><code>cdk deploy</code>：agent stack + eval stack</td><td class="ok">3 个候选 stack</td><td>每个候选同时部署自己的 Online Evaluation（evaluator 与生产一致）</td></tr>
+                <tr><td>数据集</td><td><code>create-dataset</code> · <code>create-dataset-version</code></td><td class="ok">3 份 · 各 v1</td><td>control / confirm / confirm2</td></tr>
+                <tr><td>跑流量</td><td><code>invoke-agent-runtime</code></td><td class="ok">440 次</td><td>session id 编码 run / arm / scenario / 批次</td></tr>
+                <tr><td>批量评估</td><td><code>start-batch-evaluation</code>（groundTruth）</td><td class="ok">22 次</td><td>S0 / S1 的全部结论来源</td></tr>
+                <tr><td>失败分类</td><td><code>start-batch-evaluation --insights</code></td><td class="ok">1 次</td><td>决定改哪一层（再人工复核）</td></tr>
+                <tr><td>自动推荐候选</td><td><code>start-recommendation</code></td><td class="warn">未用于本次候选</td><td>验证时试过：把计算规则写进 prompt、漏掉破损例外 → p1 人工撰写、t1 是工具开关</td></tr>
+                <tr><td>门禁 / 上线</td><td><code>09_gates.py</code>（本地算术）· <code>cdk deploy</code></td><td>S0 × 2 · S1 × 2 · 未上线</td><td>上线前还需 S2 + 人工确认</td></tr>
+            </table>
+        </div>
+    </div>
+</section>
+
+<!-- ============ CW CONSOLE SCREENSHOTS ============ -->
+<section class="slide">
+    <div class="floating-orb orb-pink" style="width:22vw;height:22vw;top:6%;left:70%;animation:orbFloat1 16s ease-in-out infinite;"></div>
+    <div class="slide-content" style="gap:clamp(0.4rem,1.2vw,1rem);">
+        <div class="section-label reveal d1 center">CloudWatch · 控制台</div>
+        <h2 class="section-title reveal d2 center">每一步在控制台里<em>看什么</em></h2>
+        <div class="shot-grid g3 reveal d3">
+            <figure class="shot"><img src="assets/cw-01-transaction-search.png" alt="" loading="lazy" onerror="this.parentElement.classList.add('missing')"><div class="ph"><span>截图待补</span><span>Ingest OpenTelemetry spans = Enabled</span><code>assets/cw-01-transaction-search.png</code></div><figcaption><b>① Transaction Search</b> · CloudWatch → Settings → X-Ray traces</figcaption></figure>
+            <figure class="shot"><img src="assets/cw-02-genai-agents.png" alt="" loading="lazy" onerror="this.parentElement.classList.add('missing')"><div class="ph"><span>截图待补</span><span>baseline + p1 / t1 / b0 四个 runtime</span><code>assets/cw-02-genai-agents.png</code></div><figcaption><b>② 4 个 runtime</b> · AgentCore → Runtime：baseline + p1 / t1 / b0</figcaption></figure>
+            <figure class="shot"><img src="assets/cw-03-trace-detail.png" alt="" loading="lazy" onerror="this.parentElement.classList.add('missing')"><div class="ph"><span>截图待补</span><span>session cwt-cwdemo1-…</span><code>assets/cw-03-trace-detail.png</code></div><figcaption><b>③ 一条 session 的 trace</b> · invoke_agent / execute_tool / chat</figcaption></figure>
+            <figure class="shot"><img src="assets/cw-04-online-eval.png" alt="" loading="lazy" onerror="this.parentElement.classList.add('missing')"><div class="ph"><span>截图待补</span><span>selfevolve_demo_online_eval</span><code>assets/cw-04-online-eval.png</code></div><figcaption><b>④ 默认评估配置</b> · cwdemo1_t1_online：8 个 evaluator（与生产一致）· 100% 采样</figcaption></figure>
+            <figure class="shot"><img src="assets/cw-05-batch-eval.png" alt="" loading="lazy" onerror="this.parentElement.classList.add('missing')"><div class="ph"><span>截图待补</span><span>cwdemo1_baseline_control_b1</span><code>assets/cw-05-batch-eval.png</code></div><figcaption><b>⑤ 批量评估</b> · 24 个任务：各 arm × control / confirm / confirm2 × 批次</figcaption></figure>
+            <figure class="shot"><img src="assets/cw-06-insights.png" alt="" loading="lazy" onerror="this.parentElement.classList.add('missing')"><div class="ph"><span>截图待补</span><span>cwdemo1_baseline_control_insight</span><code>assets/cw-06-insights.png</code></div><figcaption><b>⑥ Insights</b> · 80 个 session → 2 类失败（20/80 · 9/80）· 用户意图 15 · 执行摘要 12</figcaption></figure>
+        </div>
+    </div>
+</section>
+
+<!-- ============ 10. CODE: DATASET + BATCH EVAL ============ -->
+<section class="slide">
+    <div class="floating-orb orb-pink" style="width:20vw;height:20vw;bottom:8%;left:4%;animation:orbFloat1 16s ease-in-out infinite;"></div>
+    <div class="slide-content" style="gap:clamp(0.4rem,1.2vw,1rem);">
+        <div class="section-label reveal d1 center">CloudWatch · 关键调用 ①</div>
+        <h2 class="section-title reveal d2 center">数据集 + <em>带标准答案的批量评估</em></h2>
+        <div class="code-grid">
+            <div class="code-card reveal d3">
+                <div class="code-head"><span class="code-dots"><i></i><i></i><i></i></span><b>03 · 注册数据集</b>&nbsp;schema：AGENTCORE_EVALUATION_PREDEFINED_V1</div>
+<pre class="code"><span class="c"># 字段是蛇形：scenario_id / turns[].input / expected_response</span>
+<span class="k">aws bedrock-agentcore-control create-dataset</span> \
+  <span class="f">--cli-input-json</span> <span class="s">'{"datasetName":"cwdemo1_control",
+    "schemaType":"AGENTCORE_EVALUATION_PREDEFINED_V1",
+    "source":{"inlineExamples":{"examples":[{
+      "scenario_id":"prod_001",
+      "turns":[{"input":"订单号 ORD-10101 …",
+                "expected_response":"… 合计可退 143.10 元"}],
+      "assertions":["合计退款金额必须为 143.10 元"],
+      "expected_trajectory":["get_order","get_refund_policy"]}]}}}'</span>
+<span class="k">aws bedrock-agentcore-control create-dataset-version</span> <span class="f">--dataset-id</span> $DID</pre>
+            </div>
+            <div class="code-card reveal d4">
+                <div class="code-head"><span class="code-dots"><i></i><i></i><i></i></span><b>05 · 批量评估</b>&nbsp;每个 session 注入 ground truth</div>
+<pre class="code"><span class="k">aws bedrock-agentcore start-batch-evaluation</span> <span class="f">--cli-input-json</span> <span class="s">'{
+  "batchEvaluationName":"cwdemo1_baseline_b1",
+  "evaluators":[{"evaluatorId":"Builtin.Correctness"}, …],
+  "dataSourceConfig":{"cloudWatchLogs":{
+    "serviceNames":["selfevolve_demo_order_support.v1"],
+    "logGroupNames":["aws/spans", "<runtime log group>"],
+    "filterConfig":{"sessionIds":[…],"timeRange":{…}}}},
+  "evaluationMetadata":{"sessionMetadata":[{
+    "sessionId":"cwt-cwdemo1-baseline-prod_001-b1",
+    "groundTruth":{"inline":{
+      "turns":[{"expectedResponse":{…}}],
+      "assertions":[…],
+      "expectedTrajectory":{"toolNames":[…]}}}}]}}'</span>
+<span class="c"># 逐 session 结果 → …/batch-evaluations/results/default</span></pre>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============ 11. CODE: INSIGHTS + GATES ============ -->
+<section class="slide">
+    <div class="floating-orb orb-purple" style="width:24vw;height:24vw;top:6%;right:4%;animation:orbFloat3 17s ease-in-out infinite;"></div>
+    <div class="slide-content" style="gap:clamp(0.4rem,1.2vw,1rem);">
+        <div class="section-label reveal d1 center">CloudWatch · 关键调用 ②</div>
+        <h2 class="section-title reveal d2 center">失败分类 + <em>门禁</em>，以及实测踩过的坑</h2>
+        <div class="code-grid side">
+            <div class="code-card reveal d3">
+                <div class="code-head"><span class="code-dots"><i></i><i></i><i></i></span><b>06 / 09 · insights 与门禁</b></div>
+<pre class="code"><span class="c"># 失败聚类 → 根因 → 受影响 session → fixType</span>
+<span class="k">aws bedrock-agentcore start-batch-evaluation</span> <span class="f">--cli-input-json</span> <span class="s">'{
+  "insights":[{"insightId":"Builtin.Insight.FailureAnalysis"},
+              {"insightId":"Builtin.Insight.UserIntent"},
+              {"insightId":"Builtin.Insight.ExecutionSummary"}],
+  "dataSourceConfig":{…同 05…}}'</span>
+
+<span class="c"># 门禁：A/A → 登记（早于候选）→ 配对比较</span>
+<span class="k">python3 09_gates.py calibrate</span> <span class="f">--a-batches</span> 1 2 <span class="f">--b-batches</span> 3 4
+<span class="k">python3 09_gates.py register</span>  <span class="f">--stage</span> S0 <span class="f">--set</span> control
+<span class="k">python3 09_gates.py compare</span>   <span class="f">--stage</span> S1 <span class="f">--cand</span> t1 <span class="f">--base</span> b0 \
+        <span class="f">--set</span> confirm,confirm2 <span class="f">--batches</span> 1 2</pre>
+            </div>
+            <div class="code-card reveal d4">
+                <div class="code-head"><span class="code-dots"><i></i><i></i><i></i></span><b>不报错、只会给错结果</b></div>
+                <ul class="pit-list">
+                    <li><b>0 个 session</b>：<code>logGroupNames</code> 必须包含 <code>aws/spans</code></li>
+                    <li><b>insight 全部失败</b>：id 必须是 <code>Builtin.Insight.*</code></li>
+                    <li><b>evaluators 与 insights</b>不能放进同一个 batch</li>
+                    <li><b>recommendation</b> 只接受 1 个 evaluator；中文短 prompt 曾被 prompt 攻击防护误拦</li>
+                    <li><b>期望轨迹</b>按工具层写；换工具层的候选必然「回退」</li>
+                    <li><b>PII / Security 判官</b>对订单号、金额等有系统性误报，先做误报测试再作硬门</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============ DEPLOYED ARMS + HOW EVALUATED ============ -->
+<section class="slide">
+    <div class="floating-orb orb-blue" style="width:24vw;height:24vw;top:8%;left:64%;animation:orbFloat2 16s ease-in-out infinite;"></div>
+    <div class="slide-content" style="gap:clamp(0.4rem,1.2vw,1rem);">
+        <div class="section-label reveal d1 center">CloudWatch · 实测 run cwdemo1</div>
+        <h2 class="section-title reveal d2 center">部署了哪些 runtime，<em>每个怎么评估</em></h2>
+        <div class="table-wrap reveal d3">
+            <table class="themed">
+                <tr><th>Stack / Runtime</th><th>角色</th><th>与生产 baseline 的唯一差别</th><th>批量评估（有标准答案）</th><th>默认评估（Online）</th></tr>
+                <tr><td>selfevolve-demo-agent</td><td>生产 baseline</td><td>— （2026-09 旧包 · prompt v1 · basic 工具）</td><td>control × 4 批 → S0 对照</td><td class="ok">生产 config · 121 session</td></tr>
+                <tr><td>…-agent-p1</td><td>候选 · Prompt 层</td><td>只换 <code>prompts.json</code>（追加两句）</td><td>control × 4 批 → S0 <span class="bad">FAIL</span></td><td>未配置</td></tr>
+                <tr><td>…-agent-t1</td><td>候选 · Tool 层</td><td>只开 <code>AGENT_TOOL_TIER=enhanced</code>（工具直接算资格与金额）</td><td>control × 4 + confirm 40 题 × 2 → S0 / S1</td><td class="ok">cwdemo1_t1_online <span style="color:var(--text-secondary);font-weight:400">（本次 CLI 补建）</span></td></tr>
+                <tr><td>…-agent-b0</td><td>对照 · 同包重建</td><td>无 —— 用当前代码 / 数据重新打包的 baseline</td><td>confirm 40 题 × 2 → S1 对照</td><td class="ok">cwdemo1_b0_online <span style="color:var(--text-secondary);font-weight:400">（本次 CLI 补建）</span></td></tr>
+            </table>
+        </div>
+        <div class="features-grid">
+            <div class="feature-card reveal d4"><div class="feat-icon"><i data-lucide="git-compare"></i></div><h3>每组比较只差一层</h3><p><b>p1 vs baseline</b>：Prompt · <b>t1 vs b0</b>：Tool · <b>b0 vs baseline</b>：只差打包（可做 A/A 确认无影响）</p></div>
+            <div class="feature-card reveal d5"><div class="feat-icon"><i data-lucide="flask-conical"></i></div><h3>S0 / S1 用批量评估</h3><p>同一份 Dataset、同一组 session id，<code>start-batch-evaluation</code> 按 session 注入标准答案；逐 session 分数做配对 bootstrap。</p></div>
+            <div class="feature-card reveal d6"><div class="feat-icon"><i data-lucide="radio-tower"></i></div><h3>S2 用默认评估</h3><p>真实流量没有标准答案：对照与候选各配一份 online evaluation（evaluator 照抄生产），按在线分数比较。</p></div>
+        </div>
+    </div>
+</section>
+
+<!-- ============ 12. CLOUDWATCH DEMO RESULT ============ -->
+<section class="slide">
+    <div class="floating-orb orb-pink" style="width:26vw;height:26vw;top:10%;left:60%;animation:orbFloat1 16s ease-in-out infinite;"></div>
+    <div class="slide-content" style="gap:var(--content-gap);">
+        <div class="section-label reveal d1 center">CloudWatch · 实测 run cwdemo1</div>
+        <h2 class="section-title reveal d2 center">改 Prompt 没用，<em>改 Tool 层才有效</em></h2>
+        <div class="stats-row reveal d3">
+            <div class="stat-item"><div class="stat-value">23 → 13</div><div class="stat-label">Correctness 失败（control 80 格）</div></div>
+            <div class="stat-item"><div class="stat-value">+0.162</div><div class="stat-label">确认集 40 题质量 Δ</div></div>
+            <div class="stat-item"><div class="stat-value">+0.083</div><div class="stat-label">95% CI 下界</div></div>
+            <div class="stat-item"><div class="stat-value">+56%</div><div class="stat-label">token 成本</div></div>
+        </div>
+        <div class="table-wrap reveal d4">
+            <table class="themed">
+                <tr><th>阶段</th><th>候选（只改一层）</th><th>对照</th><th>质量 Δ（95% CI）</th><th>结局</th></tr>
+                <tr><td>S0 第 1 轮</td><td>p1 · Prompt 追加两句</td><td>baseline</td><td>−0.010（−0.111, +0.094）</td><td class="bad">FAIL：修好目标，却暴露心算错误</td></tr>
+                <tr><td>S0 第 2 轮</td><td>t1 · <code>AGENT_TOOL_TIER=enhanced</code></td><td>baseline</td><td>+0.081（+0.001, +0.176）</td><td class="warn">校准后 PASS</td></tr>
+                <tr><td>S1 第一次</td><td>t1</td><td>线上旧包</td><td>+0.435</td><td class="bad">作废：旧包缺确认集订单</td></tr>
+                <tr><td>S1（40 题）</td><td>t1</td><td>b0（同包重建）</td><td>+0.162（+0.083, +0.243）</td><td class="warn">校准后 PASS · 待 S2</td></tr>
+            </table>
+        </div>
+    </div>
+</section>
+
+<!-- ============ WHAT EXACTLY CHANGED ============ -->
+<section class="slide">
+    <div class="floating-orb orb-purple" style="width:22vw;height:22vw;top:6%;right:6%;animation:orbFloat2 15s ease-in-out infinite;"></div>
+    <div class="slide-content" style="gap:clamp(0.4rem,1.2vw,1rem);">
+        <div class="section-label reveal d1 center">CloudWatch · 实测 run cwdemo1</div>
+        <h2 class="section-title reveal d2 center">两个候选<em>具体改了什么</em></h2>
+        <div class="code-grid">
+            <div class="code-card reveal d3">
+                <div class="code-head"><span class="code-dots"><i></i><i></i><i></i></span><b>p1 · Prompt 层</b>&nbsp;只改 agent/prompts.json 的 system prompt</div>
+<pre class="code"><span class="c">  你是一个电商平台的售后客服助手。请友好、简洁地回答
+  用户关于退换货的问题，让用户满意。</span>
+<span class="s">+ 先依据工具返回的订单和政策判定资格，只给一个结论，
++ 前后不得矛盾；超出退货窗口时直接说明不能退款，只提供
++ 政策允许的换新或保修路径，不暗示例外。
++ 可以退款时写出每件可退金额、原始运费是否退还及
++ 退款合计（元）。</span>
+<span class="c"># 模型/工具/代码/数据不变，与 v1 只差这一处
+# 结果：判断类修好；「写出金额」放大了心算错误</span></pre>
+            </div>
+            <div class="code-card reveal d4">
+                <div class="code-head"><span class="code-dots"><i></i><i></i><i></i></span><b>t1 · Tool 层</b>&nbsp;prompt 仍是 v1（c76023c4…），只开一个开关</div>
+<pre class="code"><span class="k">AGENT_TOOL_TIER</span>=<span class="s">enhanced</span>  <span class="c"># CDK 模板只差这一行</span>
+<span class="c"># basic 原有 4 个：只返回原始字段，日期/金额靠模型算</span>
+  get_order · get_refund_policy
+  search_knowledge_base · create_return_label
+<span class="c"># enhanced 新增 3 个：确定性规则写进代码</span>
+<span class="s">+ check_return_eligibility</span>(order_id, reason)
+    → 每件：可退 / 仅换新 / 不可退 + 依据条款 id + 替代方案
+<span class="s">+ calculate_refund</span>(order_id, items_json)
+    → 逐项：原价·券分摊·实付·折旧费·退款额·运费
+<span class="s">+ get_coupon_allocation</span>(order_id)
+    → 券在各商品间的分摊明细
+<span class="c"># trace：get_order → check_return_eligibility → calculate_refund</span></pre>
+            </div>
+        </div>
+        <p class="section-desc reveal d5 center" style="font-size:var(--small-size);">说明：新工具和标准答案用的是同一套规则函数（<code>agent/tools.py</code>）。这正是 Tool 层修复的含义 —— 业务规则由代码执行、模型只负责解释；但也意味着它在这类「规则可写成代码」的问题上提升最大，判断与表达类问题仍要靠 Prompt。</p>
+    </div>
+</section>
+
+<!-- ============ 13. OMNI ============ -->
+<section class="slide">
+    <div class="floating-orb orb-blue" style="width:26vw;height:26vw;bottom:6%;right:6%;animation:orbFloat2 16s ease-in-out infinite;"></div>
+    <div class="slide-content" style="gap:clamp(0.4rem,1.2vw,1rem);">
+        <div class="section-label reveal d1 center">Part 2 · CloudWatch Omni（IDE 扩展 + MCP）</div>
+        <h2 class="section-title reveal d2 center">同一套方法，<em>实验在本地 IDE 里做</em></h2>
+        <div class="code-grid">
+            <div class="code-card reveal d3">
+                <div class="code-head"><span class="code-dots"><i></i><i></i><i></i></span><b>① 拉生产 trace（只读）</b>&nbsp;search_agent_traces</div>
+<pre class="code"><span class="c"># 先 discover_agent_traces_metadata 拿真实列名</span>
+<span class="k">SELECT</span> attributes['session.id'], traceId, MIN("@timestamp")
+<span class="k">FROM</span> "default"
+<span class="k">WHERE</span> ("@timestamp" <span class="k">BETWEEN</span> to_timestamp(<span class="s">1792328483</span>)
+                       <span class="k">AND</span> to_timestamp(<span class="s">1792414883</span>)
+   <span class="k">AND</span> attributes['gen_ai.agent.name'] = <span class="s">'Strands Agents'</span>)
+   <span class="k">AND</span> "@telemetry_type" = <span class="s">'traces'</span>
+<span class="k">GROUP BY</span> 1, 2
+<span class="c"># 坑：扁平列 "attributes.session.id" 永远为空 → 用 map 访问
+# 坑：时间两端都用整数秒绑定；0 行先当查错，不当没流量</span></pre>
+            </div>
+            <div class="code-card reveal d4">
+                <div class="code-head"><span class="code-dots"><i></i><i></i><i></i></span><b>② 本地 paired replay + 评分</b>&nbsp;MCP 工具</div>
+<pre class="code"><span class="c"># 每个 arm：换 prompts.json → 重启 dev server</span>
+<span class="k">manage_test_agent</span> {action:<span class="s">"set_start_command"</span>,
+  command:<span class="s">"OMNI_PROMPTS_OVERRIDE=c1/prompts.json \
+           opentelemetry-instrument python agent.py"</span>}
+<span class="k">local_server</span>      {action:<span class="s">"start"</span>}
+<span class="k">manage_test_agent</span> {action:<span class="s">"invoke_agent"</span>, prompt, session_id}
+<span class="k">search_local_telemetry</span> {operation:<span class="s">"get"</span>, traceIds}
+<span class="c">#   → 核对 llm.prompt_template.version / hash，不符就丢弃</span>
+<span class="k">manage_evaluations</span> {action:<span class="s">"run"</span>, evaluatorId,
+  targets:[{input, output, expected, assertions}]}
+<span class="c"># 门禁：gates_register.py（A/A）→ se_gates.py --registered</span></pre>
+            </div>
+        </div>
+        <p class="section-desc reveal d5 center">执行：<code>bash training/omni/scripts/run_step.sh 1…11</code>，一次一步、跑完即停。实测：fresh 集正确合计金额 <b>19/39 → 29/39</b>；判官重评一次 Δ 就移动 ~0.027。</p>
+    </div>
+</section>
+
+<!-- ============ OMNI SCREENSHOTS ============ -->
+<section class="slide">
+    <div class="floating-orb orb-purple" style="width:24vw;height:24vw;bottom:6%;left:4%;animation:orbFloat2 16s ease-in-out infinite;"></div>
+    <div class="slide-content" style="gap:clamp(0.4rem,1.2vw,1rem);">
+        <div class="section-label reveal d1 center">CloudWatch Omni · 界面</div>
+        <h2 class="section-title reveal d2 center">在 IDE 里<em>看见每一步</em></h2>
+        <div class="shot-grid g3 reveal d3">
+            <figure class="shot tall"><img src="assets/omni-cloud-trace-explorer.gif" alt="" loading="lazy" onerror="this.parentElement.classList.add('missing')"><figcaption><b>拉生产 trace</b> · Cloud Trace Explorer 按 evaluator / session 过滤</figcaption></figure>
+            <figure class="shot tall"><img src="assets/omni-trace-by-id.gif" alt="" loading="lazy" onerror="this.parentElement.classList.add('missing')"><figcaption><b>按 trace ID 定位</b> · dev_014：只有 get_order → create_return_label</figcaption></figure>
+            <figure class="shot tall"><img src="assets/omni-split-json.png" alt="" loading="lazy" onerror="this.parentElement.classList.add('missing')"><figcaption><b>切分</b> · eligible 35 → control 28 / holdout 7（blake2b 纯函数）</figcaption></figure>
+            <figure class="shot"><img src="assets/omni-replay-baseline-version.png" alt="" loading="lazy" onerror="this.parentElement.classList.add('missing')"><figcaption><b>paired replay · baseline</b> · span 上 <code>llm.prompt_template.version = order_support-v1</code></figcaption></figure>
+            <figure class="shot"><img src="assets/omni-replay-c3-version.png" alt="" loading="lazy" onerror="this.parentElement.classList.add('missing')"><figcaption><b>paired replay · 候选</b> · 同一位置变为 <code>c3-restructure-grounded</code></figcaption></figure>
+            <figure class="shot"><img src="assets/omni-prompt-management.png" alt="" loading="lazy" onerror="this.parentElement.classList.add('missing')"><figcaption><b>Prompt Management</b> · 写回后 v2 = c1（可一键回滚）</figcaption></figure>
+        </div>
+    </div>
+</section>
+
+<!-- ============ 14. COMPARE ============ -->
+<section class="slide compare-slide">
+    <div class="floating-orb orb-pink" style="width:22vw;height:22vw;top:12%;left:8%;animation:orbFloat2 15s ease-in-out infinite;"></div>
+    <div class="slide-content" style="gap:var(--content-gap);">
+        <div class="section-label reveal d1 center">Which One</div>
+        <h2 class="section-title reveal d2 center">CloudWatch 标准版 vs <em>Omni 版</em></h2>
+        <div class="compare-grid">
+            <div class="compare-card reveal d3">
+                <div class="compare-card-title"><div class="compare-dot" style="background:var(--accent-orange);"></div>CloudWatch 标准版</div>
+                <ul class="compare-list">
+                    <li><b>在哪跑</b>：云上，候选是独立 AgentCore runtime</li>
+                    <li><b>怎么调</b>：AWS CLI —— dataset、batch evaluation、insights、recommendation</li>
+                    <li><b>评分</b>：托管判官，按 session 注入 ground truth；TOOL_CALL / SESSION 级都能跑</li>
+                    <li><b>适合</b>：生产团队、CI/CD、交给 coding agent 自动执行</li>
+                    <li><b>代价</b>：每个候选要部署；批次与评估按调用计费</li>
+                </ul>
+            </div>
+            <div class="compare-card reveal d4">
+                <div class="compare-card-title"><div class="compare-dot" style="background:var(--accent-purple);"></div>Omni 版</div>
+                <ul class="compare-list">
+                    <li><b>在哪跑</b>：本地 dev server，候选靠 <code>OMNI_PROMPTS_OVERRIDE</code> 切换</li>
+                    <li><b>怎么调</b>：Omni MCP 工具；云端 trace 用 <code>search_agent_traces</code>（SQL）</li>
+                    <li><b>评分</b>：<code>manage_evaluations run</code>；本地 SESSION 级只有 1 个有效观测</li>
+                    <li><b>适合</b>：IDE 里快速迭代 prompt，部署前先筛选</li>
+                    <li><b>前提</b>：Kiro 带 <code>AWS_REGION</code> 启动；MCP 握手需要 token</li>
+                </ul>
+            </div>
+        </div>
+        <p class="section-desc reveal d5 center">两者共用同一套方法：全层快照 · 多批次基线 · A/A 校准 · 事先登记 · 只改一层 · 分阶段收紧</p>
+    </div>
+</section>
+
+<!-- ============ 15b. REFERENCES ============ -->
+<section class="slide">
+    <div class="floating-orb orb-purple" style="width:24vw;height:24vw;top:8%;left:4%;animation:orbFloat1 16s ease-in-out infinite;"></div>
+    <div class="slide-content" style="gap:var(--content-gap);">
+        <div class="section-label reveal d1 center">References</div>
+        <h2 class="section-title reveal d2 center">AWS 官方文档：<em>照着配就能跑通</em></h2>
+        <div class="features-grid">
+            <div class="feature-card doc-group reveal d3"><h3><i data-lucide="radar"></i>可观测性</h3><ul>
+                <li><a href="https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/observability-get-started.html" target="_blank"><b>Get started with AgentCore Observability</b><br><code>…/devguide/observability-get-started.html</code></a></li>
+                <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-Transaction-Search.html" target="_blank"><b>CloudWatch Transaction Search</b></a></li>
+                <li><a href="https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/observability-configure.html" target="_blank"><b>Add observability to your agents</b></a></li>
+                <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/GenAI-observability.html" target="_blank"><b>CloudWatch GenAI observability</b></a></li>
+                <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/AgentCore-Agents.html" target="_blank"><b>GenAI observability · AgentCore agents</b></a></li></ul></div>
+            <div class="feature-card doc-group reveal d4"><h3><i data-lucide="gauge"></i>评估</h3><ul>
+                <li><a href="https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/evaluations.html" target="_blank"><b>AgentCore Evaluations 总览</b><br><code>…/devguide/evaluations.html</code></a></li>
+                <li><a href="https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/online-evaluations.html" target="_blank"><b>Online evaluation</b>（默认评估）</a></li>
+                <li><a href="https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/batch-evaluations.html" target="_blank"><b>Batch evaluation</b></a></li>
+                <li><a href="https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/ground-truth-evaluations.html" target="_blank"><b>Ground truth evaluations</b></a></li>
+                <li><a href="https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/built-in-evaluators-overview.html" target="_blank"><b>Built-in evaluators</b></a> · <a href="https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/custom-evaluators.html" target="_blank"><b>Custom evaluators</b></a></li></ul></div>
+            <div class="feature-card doc-group reveal d5"><h3><i data-lucide="database"></i>数据集与改进</h3><ul>
+                <li><a href="https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/dataset-evaluations.html" target="_blank"><b>Dataset evaluation（Preview）</b></a></li>
+                <li><a href="https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/dataset-evaluations-schema.html" target="_blank"><b>Dataset schema</b></a></li>
+                <li><a href="https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/batch-evaluations-insights.html" target="_blank"><b>Insights in batch evaluation</b></a></li>
+                <li><a href="https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/optimization-recommendations.html" target="_blank"><b>Recommendations</b>（prompt / 工具描述）</a></li></ul></div>
+        </div>
+        <p class="section-desc reveal d6 center" style="font-size:var(--small-size);">前缀：<code>docs.aws.amazon.com/bedrock-agentcore/latest/devguide/</code> · <code>docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/</code></p>
+    </div>
+</section>
+
+<!-- ============ 15. CLOSING ============ -->
+<section class="slide title-slide">
+    <div class="blob-canvas">
+        <div class="blob" style="width:55vw;height:55vw;top:-10%;left:35%;animation:blob1 13s ease-in-out infinite;"></div>
+        <div class="blob" style="width:45vw;height:45vw;bottom:-10%;left:-8%;animation:blob3 17s ease-in-out infinite;"></div>
+    </div>
+    <div class="slide-content">
+        <div class="title-label reveal d1">Takeaways</div>
+        <h1 class="title-main reveal d2">先测准，<br><em>再改进</em></h1>
+        <div class="title-accent reveal d3"></div>
+        <p class="title-sub reveal d4">开 Transaction Search 并验证 span · 标准答案只来自规则 · 多批次 + A/A 测噪声<br>门禁事先登记、按阶段收紧 · 每轮只改一层、对照同包重建 · 上线前人确认</p>
+        <p class="title-sub reveal d5" style="font-size:var(--small-size);opacity:0.75;">材料：training/cloudwatch（CLI 脚本 + demo 记录）· training/omni（MCP 版本）</p>
+    </div>
+</section>
+
+<script>
+/* ===========================================
+   SLIDE PRESENTATION CONTROLLER
+   Keyboard · wheel · touch · nav dots · progress · page number
+   =========================================== */
+class SlidePresentation {
+    constructor() {
+        this.slides = Array.from(document.querySelectorAll('.slide'));
+        this.current = 0;
+        this.locked = false;
+        this.dots = document.getElementById('navDots');
+        this.bar = document.getElementById('progressBar');
+        this.pageNum = document.getElementById('pageNumber');
+        this.setupNavDots();
+        this.setupObserver();
+        this.setupKeyboard();
+        this.setupWheel();
+        this.setupTouch();
+        this.update();
+    }
+    setupNavDots() {
+        this.slides.forEach((_, i) => {
+            const b = document.createElement('button');
+            b.setAttribute('aria-label', `第 ${i + 1} 页`);
+            b.addEventListener('click', () => this.go(i));
+            this.dots.appendChild(b);
+        });
+    }
+    setupObserver() {
+        const io = new IntersectionObserver(entries => {
+            entries.forEach(e => {
+                if (e.isIntersecting) {
+                    e.target.classList.add('visible');
+                    this.current = this.slides.indexOf(e.target);
+                    this.update();
+                }
+            });
+        }, { threshold: 0.55 });
+        this.slides.forEach(s => io.observe(s));
+    }
+    setupKeyboard() {
+        document.addEventListener('keydown', e => {
+            if (['ArrowDown', 'ArrowRight', 'PageDown', ' '].includes(e.key)) { e.preventDefault(); this.go(this.current + 1); }
+            if (['ArrowUp', 'ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); this.go(this.current - 1); }
+            if (e.key === 'Home') this.go(0);
+            if (e.key === 'End') this.go(this.slides.length - 1);
+        });
+    }
+    setupWheel() {
+        window.addEventListener('wheel', e => {
+            e.preventDefault();
+            if (this.locked || Math.abs(e.deltaY) < 20) return;
+            this.go(this.current + (e.deltaY > 0 ? 1 : -1));
+        }, { passive: false });
+    }
+    setupTouch() {
+        let y0 = null;
+        window.addEventListener('touchstart', e => { y0 = e.touches[0].clientY; }, { passive: true });
+        window.addEventListener('touchend', e => {
+            if (y0 === null) return;
+            const dy = y0 - e.changedTouches[0].clientY;
+            if (Math.abs(dy) > 50) this.go(this.current + (dy > 0 ? 1 : -1));
+            y0 = null;
+        });
+    }
+    go(i) {
+        if (i < 0 || i >= this.slides.length) return;
+        this.locked = true;
+        this.slides[i].scrollIntoView({ behavior: 'smooth' });
+        this.current = i;
+        this.update();
+        setTimeout(() => { this.locked = false; }, 700);
+    }
+    update() {
+        Array.from(this.dots.children).forEach((d, i) => d.classList.toggle('active', i === this.current));
+        this.bar.style.width = `${((this.current + 1) / this.slides.length) * 100}%`;
+        if (this.pageNum) this.pageNum.textContent = `${this.current + 1} / ${this.slides.length}`;
+    }
+}
+
+/* Speaker info injection */
+if (typeof SPEAKER !== 'undefined') {
+    const el = document.getElementById('speakerInfo');
+    if (el) el.textContent = `${SPEAKER.name}, ${SPEAKER.company} ${SPEAKER.title}`;
+}
+new SlidePresentation();
+
+/* Image lightbox：点击截图放大，Esc / 点击关闭 */
+(() => {
+    const lb = document.getElementById('lightbox'), big = lb.querySelector('img');
+    document.querySelectorAll('.shot img').forEach(img => img.addEventListener('click', e => {
+        e.stopPropagation(); big.src = img.src; lb.classList.add('open');
+    }));
+    lb.addEventListener('click', () => lb.classList.remove('open'));
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') lb.classList.remove('open'); });
+})();
+if (typeof lucide !== 'undefined') lucide.createIcons();
+</script>
+</body>
+</html>

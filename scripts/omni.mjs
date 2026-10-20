@@ -54,6 +54,12 @@ function resolvePort() {
   return port;
 }
 
+function resolveToken() {
+  if (process.env.OMNI_MCP_TOKEN) return process.env.OMNI_MCP_TOKEN;
+  try { return fs.readFileSync(path.join(WORKSPACE, '.omni', 'mcp-token'), 'utf8').trim() || undefined; }
+  catch { return undefined; }
+}
+
 function die(code, msg) {
   process.stderr.write(msg.endsWith('\n') ? msg : msg + '\n');
   process.exit(code);
@@ -72,8 +78,11 @@ function rpc(method, params) {
     const send = (obj) => sock.write(JSON.stringify(obj) + '\n');
     let buf = '';
 
+    // Amazon CloudWatch Omni 1.1.0 起，workspace/verify 需要 token（官方 proxy 读 OMNI_MCP_TOKEN；
+    // 扩展同时把它写在 .omni/mcp-token）。旧版扩展不需要，传了也无害。
     sock.on('connect', () =>
-      send({ jsonrpc: '2.0', id: 'verify', method: 'workspace/verify', params: { workspace: WORKSPACE } }));
+      send({ jsonrpc: '2.0', id: 'verify', method: 'workspace/verify',
+             params: { workspace: WORKSPACE, token: resolveToken() } }));
 
     sock.on('data', (chunk) => {
       buf += chunk;
@@ -118,9 +127,14 @@ function rpc(method, params) {
  * content[0].text 里的一段 JSON 字符串。这里剥掉外层信封。
  */
 function unwrap(result) {
-  const text = result?.content?.[0]?.text;
-  if (typeof text !== 'string') return result;
-  try { return JSON.parse(text); } catch { return { text }; }
+  const texts = (result?.content ?? []).map((c) => c?.text).filter((t) => typeof t === 'string');
+  if (!texts.length) return result;
+  // 云端工具（search_agent_traces 等）会在 payload 前插一段 grounding 纯文本块，
+  // 只看 content[0] 会把真正的结果丢掉 —— 取第一个能解析成 JSON 的块。
+  for (const t of texts) {
+    try { return JSON.parse(t); } catch { /* 不是 JSON，继续 */ }
+  }
+  return { text: texts.join('\n') };
 }
 
 export async function callTool(name, args = {}) {
@@ -129,7 +143,7 @@ export async function callTool(name, args = {}) {
 
 export async function listTools() {
   const r = await rpc('tools/list', {});
-  return r.tools.map((t) => ({ name: t.name, description: t.description }));
+  return r.tools.map((t) => ({ name: t.name, description: t.description, inputSchema: t.inputSchema }));
 }
 
 // ── CLI ────────────────────────────────────────────────────────────────────

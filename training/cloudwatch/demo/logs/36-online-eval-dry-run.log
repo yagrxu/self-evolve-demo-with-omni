@@ -1,0 +1,26 @@
+[21:40:35] 生产 config selfevolve_demo_online_eval-b8cUsWHGnR 的 evaluator 列表（照抄，保证同一把尺子）
+    Builtin.Correctness
+    Builtin.InstructionFollowing
+    Builtin.Helpfulness
+    Builtin.Faithfulness
+    Builtin.ToolSelectionAccuracy
+    Builtin.ToolParameterAccuracy
+    Builtin.GoalSuccessRate
+    selfevolve_demo_PolicyGrounding-IS7lH859gB
+  role   : selfevolve-demo-online-eval-cwdemo1-b0
+  log grp: /aws/bedrock-agentcore/runtimes/selfevolve_demo_order_support_b0-apsocPA1AM-v1
+  service: selfevolve_demo_order_support_b0.v1
+  ✓ dry-run：请求已写到 /Users/yagrxu/me/collaborations/2026/tfc/self-evolve-demo-with-omni/training/cloudwatch/runs/cwdemo1/online-eval-b0.request.json，未创建任何资源
+[21:40:39] 生产 config selfevolve_demo_online_eval-b8cUsWHGnR 的 evaluator 列表（照抄，保证同一把尺子）
+    Builtin.Correctness
+    Builtin.InstructionFollowing
+    Builtin.Helpfulness
+    Builtin.Faithfulness
+    Builtin.ToolSelectionAccuracy
+    Builtin.ToolParameterAccuracy
+    Builtin.GoalSuccessRate
+    selfevolve_demo_PolicyGrounding-IS7lH859gB
+  role   : selfevolve-demo-online-eval-cwdemo1-t1
+  log grp: /aws/bedrock-agentcore/runtimes/selfevolve_demo_order_support_t1-pOfuBW665N-v1
+  service: selfevolve_demo_order_support_t1.v1
+  ✓ dry-run：请求已写到 /Users/yagrxu/me/collaborations/2026/tfc/self-evolve-demo-with-omni/training/cloudwatch/runs/cwdemo1/online-eval-t1.request.json，未创建任何资源

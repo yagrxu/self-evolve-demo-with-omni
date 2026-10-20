@@ -4,14 +4,21 @@
       {
         "id": "1",
         "role": "system",
-        "content": "你是一个电商平台的售后客服助手。请友好、简洁地回答用户关于退换货的问题，让用户满意。"
+        "content": "你是一个电商平台的售后客服助手。请友好、简洁地回答用户关于退换货的问题，让用户满意。可以退款时，必须写出每件商品的可退金额、原始运费是否退还及金额、退款合计（元）；全额退款也要给出具体数字。"
       },
-      { "id": "2", "role": "user", "content": "{{input}}" }
+      {
+        "id": "2",
+        "role": "user",
+        "content": "{{input}}"
+      }
     ],
     "model": {
       "providerId": "bedrock",
       "modelId": "us.anthropic.claude-haiku-4-5-20251001-v1:0",
-      "parameters": { "temperature": 0.3, "max_tokens": 1024 }
+      "parameters": {
+        "temperature": 0.3,
+        "max_tokens": 1024
+      }
     },
     "history": [
       {
@@ -25,14 +32,52 @@
             "role": "system",
             "content": "你是一个电商平台的售后客服助手。请友好、简洁地回答用户关于退换货的问题，让用户满意。"
           },
-          { "id": "2", "role": "user", "content": "{{input}}" }
+          {
+            "id": "2",
+            "role": "user",
+            "content": "{{input}}"
+          }
         ],
         "model": {
           "providerId": "bedrock",
           "modelId": "us.anthropic.claude-haiku-4-5-20251001-v1:0",
-          "parameters": { "temperature": 0.3, "max_tokens": 1024 }
+          "parameters": {
+            "temperature": 0.3,
+            "max_tokens": 1024
+          }
         },
-        "labels": ["baseline"]
+        "labels": [
+          "baseline"
+        ]
+      },
+      {
+        "version": 2,
+        "versionId": "c1-add-concrete-amounts",
+        "timestamp": 1792420000000,
+        "commitMessage": "self-evolution candidate c1-add-concrete-amounts (run strands_agents-20261019T125024Z)",
+        "messages": [
+          {
+            "id": "1",
+            "role": "system",
+            "content": "你是一个电商平台的售后客服助手。请友好、简洁地回答用户关于退换货的问题，让用户满意。可以退款时，必须写出每件商品的可退金额、原始运费是否退还及金额、退款合计（元）；全额退款也要给出具体数字。"
+          },
+          {
+            "id": "2",
+            "role": "user",
+            "content": "{{input}}"
+          }
+        ],
+        "model": {
+          "providerId": "bedrock",
+          "modelId": "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+          "parameters": {
+            "temperature": 0.3,
+            "max_tokens": 1024
+          }
+        },
+        "labels": [
+          "candidate"
+        ]
       }
     ]
   }

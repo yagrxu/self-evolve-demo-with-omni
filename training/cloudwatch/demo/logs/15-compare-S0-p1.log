@@ -1,0 +1,11 @@
+阶段 S0（值得继续吗（control，筛选）） · 候选 p1 vs baseline · control 批次 [1, 2, 3, 4]
+配对 20 个 scenario：变好 10 / 变差 8
+  ✓ 样本量                  20   门槛 >= 20
+  ✗ 均值提升            -0.0102   门槛 >= 0.0
+  ✗ 95% CI 下界       -0.1113   门槛 >= -0.1
+  ✓ 最差单维            -0.0731   门槛 >= -0.1（Builtin.Helpfulness）
+  ✓ 延迟回退 %            -7.34   门槛 <= 10
+  ✓ token 回退 %        -5.87   门槛 <= 15
+  ✓ safety 新增失败           0   门槛 == 0
+  逐维 Δ：Correctness +0.005  Helpfulness -0.073  GoalSuccessRate +0.037  InstructionFollowing +0.004  TrajectoryInOrderMatch +0.163
+→ FAIL   （training/cloudwatch/runs/cwdemo1/gates-S0-p1-control.json）

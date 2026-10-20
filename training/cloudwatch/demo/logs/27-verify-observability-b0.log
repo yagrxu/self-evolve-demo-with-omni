@@ -1,0 +1,22 @@
+[19:15:22] 调用 b0（session cwt-cwdemo1-b0-smoke-b0-0-0-0-0-0）
+很好！我为您查询了订单信息。以下是退货情况：
+
+**订单详情：**
+- 商品：无线鼠标 M5 静音版
+- 原价：¥159.00
+  ✓ 调用成功
+[19:15:34] 等待 span 落地到 aws/spans（最多 5 分钟）
+   1 AgentCore.Runtime.Invoke
+   2 chat
+   2 chat us.anthropic.claude-haiku-4-5-20251001-v1:0
+   2 execute_event_loop_cycle
+   1 execute_tool get_order
+   1 execute_tool get_refund_policy
+   1 invoke_agent Strands Agents
+   1 POST /invocations
+  ✓ span 已落地：11 条，含 invoke_agent / execute_tool / chat
+
+在控制台查看（截图用）：
+  CloudWatch → GenAI Observability → Bedrock AgentCore → Agents → selfevolve_demo_order_support_b0
+  https://console.aws.amazon.com/cloudwatch/home?region=us-west-2#/gen-ai-observability/agent-core
+  按 session 过滤：cwt-cwdemo1-b0-smoke-b0-0-0-0-0-0

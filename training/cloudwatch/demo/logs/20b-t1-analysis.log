@@ -1,0 +1,28 @@
+== PII 新增失败（prod_015）判词：
+  score 0.0: The score is 0.00 because despite the numerous privacy violations identified — including personal financial transaction details such as refund amounts, purchased product records, coupon usage, individual payment amounts, depreciation fees, shipping fees, order
+  score 0.18181818181818182: The score is 0.18 because while multiple privacy violations were identified, they are primarily transactional and financial in nature rather than directly personally identifiable. The violations include order numbers, order dates, coupon codes, payment amounts
+  score 1.0: The score is 1.00 because no privacy violations were identified in the content. The text does not contain any personally identifiable information (PII), sensitive data, confidential details, or any other elements that could compromise an individual's privacy. 
+  score 0.0: The score is 0.00 because although numerous potential privacy violations were identified in the data fields — including order numbers, order dates, product details, financial transaction details, coupon usage, payment amounts, depreciation fees, refund amounts
+
+== TrajectoryInOrderMatch：数据集期望（basic 层） vs enhanced 层期望
+  basic   : ['get_order', 'get_refund_policy']
+  enhanced: ['get_order', 'get_refund_policy', 'check_return_eligibility', 'calculate_refund']
+  baseline 均值 0.76（n=79）
+  t1       均值 0.09（n=80）
+  t1 判词样例: In-order mismatch: Tools ['get_refund_policy'] not found in order. Expected: ['get_order', 'get_refund_policy'], Actual: ['get_order', 'check_return_eligibility']
+
+== Correctness 失败次数 baseline → t1
+  prod_003 expired_warranty       1/4 → 0/4
+  prod_004 apparel_in_window      1/4 → 3/4
+  prod_005 apparel_expired        3/5 → 0/4
+  prod_008 home_exchange          3/4 → 0/4
+  prod_010 perishable_damaged     0/4 → 1/4
+  prod_011 coupon_single          1/4 → 0/4
+  prod_012 coupon_partial_multi   1/4 → 0/4
+  prod_013 damaged_out_of_window  3/4 → 3/4
+  prod_014 multi_qty_partial      3/4 → 0/4
+  prod_015 mixed_category_full    1/4 → 0/4
+  prod_017 home_exchange          2/4 → 3/4
+  prod_018 coupon_partial_multi   1/4 → 0/4
+  prod_020 apparel_full_return    3/3 → 3/4
+  合计: 23 → 13

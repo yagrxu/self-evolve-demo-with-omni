@@ -35,7 +35,10 @@ echo "==> 复制 agent 源码与 fixture"
 # 那会把 .build/ 自己和 __pycache__ 递归包进去。
 cp "${SRC}"/*.py "${BUILD}/"
 cp "${SRC}/requirements.txt" "${BUILD}/"
-cp "${SRC}/prompts.json" "${BUILD}/"
+# PROMPTS_FILE：把某个候选的 prompts.json 当作包内的 prompts.json（training 流程用）。
+# 未设置时用 agent/prompts.json —— 这样变体之间唯一的差异就是这一个文件。
+cp "${PROMPTS_FILE:-${SRC}/prompts.json}" "${BUILD}/prompts.json"
+echo "    prompts.json ← ${PROMPTS_FILE:-${SRC}/prompts.json}"
 cp -R "${SRC}/fixtures" "${BUILD}/fixtures"
 
 echo "==> 安装依赖 (platform=${PLATFORM}, python=${PY_VERSION})"

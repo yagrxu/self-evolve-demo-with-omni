@@ -1,0 +1,62 @@
+[17:42:07] 打包 agent（Direct Code Deploy，依赖 vendored 进 zip）
+ERROR: pip's dependency resolver does not currently take into account all the packages that are installed. This behaviour is the source of the following dependency conflicts.
+opentelemetry-instrumentation-boto 0.61b0 requires opentelemetry-instrumentation==0.61b0, but you have opentelemetry-instrumentation 0.65b0 which is incompatible.
+opentelemetry-instrumentation-boto 0.61b0 requires opentelemetry-semantic-conventions==0.61b0, but you have opentelemetry-semantic-conventions 0.65b0 which is incompatible.
+fastapi 0.115.0 requires starlette<0.39.0,>=0.37.2, but you have starlette 1.9.0 which is incompatible.
+opentelemetry-instrumentation-elasticsearch 0.61b0 requires opentelemetry-instrumentation==0.61b0, but you have opentelemetry-instrumentation 0.65b0 which is incompatible.
+opentelemetry-instrumentation-elasticsearch 0.61b0 requires opentelemetry-semantic-conventions==0.61b0, but you have opentelemetry-semantic-conventions 0.65b0 which is incompatible.
+opentelemetry-instrumentation-elasticsearch 0.61b0 requires wrapt<2.0.0,>=1.0.0, but you have wrapt 2.5.1 which is incompatible.
+jsii 1.130.0 requires attrs<26.0,>=21.2, but you have attrs 26.1.0 which is incompatible.
+aws-gameday-quests 1.1.43 requires click==8.1.8, but you have click 8.5.0 which is incompatible.
+aws-gameday-quests 1.1.43 requires pyyaml==6.0.1, but you have pyyaml 6.0.3 which is incompatible.
+
+[notice] A new release of pip is available: 26.1.1 -> 26.2.1
+[notice] To update, run: pip install --upgrade pip
+    （保留 *.dist-info —— ADOT 的 entry point 发现依赖它，见脚本内注释）
+==> 冒烟检查
+    ✓ ADOT entry points 可发现（57 个）
+==> 完成：/Users/yagrxu/me/collaborations/2026/tfc/self-evolve-demo-with-omni/agent/.build  ( 99M, 5352 个文件, platform=manylinux2014_aarch64)
+  ✓ prompt 版本：p1 128404e2a792b97fd851d632fab87065
+[17:42:39] 部署 selfevolve-demo-agent-p1
+AI agent detected
+
+✨  Synthesis time: 13.53s
+
+selfevolve-demo-agent-p1: start: Building Runtime/AgentRuntimeArtifact
+selfevolve-demo-agent-p1: success: Built Runtime/AgentRuntimeArtifact
+selfevolve-demo-agent-p1: start: Building selfevolve-demo-agent-p1 Template
+selfevolve-demo-agent-p1: success: Built selfevolve-demo-agent-p1 Template
+selfevolve-demo-agent-p1: start: Publishing selfevolve-demo-agent-p1 Template (613477150601-us-west-2-d4b86fca)
+selfevolve-demo-agent-p1: start: Publishing Runtime/AgentRuntimeArtifact (613477150601-us-west-2-a0cd330e)
+selfevolve-demo-agent-p1: success: Published selfevolve-demo-agent-p1 Template (613477150601-us-west-2-d4b86fca)
+selfevolve-demo-agent-p1: success: Published Runtime/AgentRuntimeArtifact (613477150601-us-west-2-a0cd330e)
+selfevolve-demo-agent-p1: creating CloudFormation changeset...
+selfevolve-demo-agent-p1: deploying... [1/1]
+
+✅  selfevolve-demo-agent-p1
+
+✨  Deployment time: 98.93s
+
+Outputs:
+selfevolve-demo-agent-p1.ApplicationLogGroup = /aws/bedrock-agentcore/runtimes/selfevolve_demo_order_support_p1-C0MWWUH3sd-DEFAULT
+selfevolve-demo-agent-p1.EndpointName = v1
+selfevolve-demo-agent-p1.ExecutionRoleArn = arn:aws:iam::613477150601:role/selfevolve_demo_order_support_p1-exec-us-west-2
+selfevolve-demo-agent-p1.PromptVariant = p1
+selfevolve-demo-agent-p1.RuntimeArn = arn:aws:bedrock-agentcore:us-west-2:613477150601:runtime/selfevolve_demo_order_support_p1-C0MWWUH3sd
+selfevolve-demo-agent-p1.RuntimeId = selfevolve_demo_order_support_p1-C0MWWUH3sd
+Stack ARN:
+arn:aws:cloudformation:us-west-2:613477150601:stack/selfevolve-demo-agent-p1/af5810e0-cc6a-11f1-bb81-06e2584f6eff
+
+✨  Total time: 146.21s
+
+{
+    "name": "selfevolve_demo_order_support_p1",
+    "status": "READY",
+    "version": "1",
+    "entry": [
+        "opentelemetry-instrument",
+        "agent.py"
+    ]
+}
+  ✓ p1 已部署：arn:aws:bedrock-agentcore:us-west-2:613477150601:runtime/selfevolve_demo_order_support_p1-C0MWWUH3sd
+[17:45:10] 下一步：02_verify_observability.sh p1

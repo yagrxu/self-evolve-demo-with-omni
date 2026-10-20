@@ -1,0 +1,15 @@
+{
+  "_doc": "Omni 流程的门禁模板。gates_register.py 在任何候选结果出现之前，用 A/A（诊断批次 vs 第二次 baseline 批次）把它算成具体数字并冻结到 .omni/self-evolution/<run>/gates.registered.<stage>.json。",
+  "business": {
+    "min_meaningful_improvement": 0.0,
+    "non_inferiority_margin": {"S0": 0.05, "S1": 0.03},
+    "token_budget_pct": 15,
+    "latency_budget_pct": 10
+  },
+  "stages": {
+    "S0": {"question": "值得继续吗（control，筛选）", "min_scenarios": 20, "set": "control"},
+    "S1": {"question": "没见过的题上不更差（holdout + fresh）", "min_scenarios": 40, "set": "fresh"},
+    "S2": {"question": "真的更好吗（云上灰度）", "min_scenarios": 200, "set": "cloud"}
+  },
+  "bootstrap": {"iterations": 10000, "confidence": 0.95, "seed": 20260918}
+}

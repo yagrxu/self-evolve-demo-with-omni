@@ -1,0 +1,39 @@
+{
+  "order_support": {
+    "messages": [
+      {
+        "id": "1",
+        "role": "system",
+        "content": "你是一个电商平台的售后客服助手。请友好、简洁地回答用户关于退换货的问题，让用户满意。"
+      },
+      { "id": "2", "role": "user", "content": "{{input}}" }
+    ],
+    "model": {
+      "providerId": "bedrock",
+      "modelId": "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "parameters": { "temperature": 0.3, "max_tokens": 1024 }
+    },
+    "history": [
+      {
+        "version": 1,
+        "versionId": "order_support-v1",
+        "timestamp": 1789655148202,
+        "commitMessage": "feat: baseline prompt (故意做弱, 作为 self-evolution 的起点)",
+        "messages": [
+          {
+            "id": "1",
+            "role": "system",
+            "content": "你是一个电商平台的售后客服助手。请友好、简洁地回答用户关于退换货的问题，让用户满意。"
+          },
+          { "id": "2", "role": "user", "content": "{{input}}" }
+        ],
+        "model": {
+          "providerId": "bedrock",
+          "modelId": "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+          "parameters": { "temperature": 0.3, "max_tokens": 1024 }
+        },
+        "labels": ["baseline"]
+      }
+    ]
+  }
+}

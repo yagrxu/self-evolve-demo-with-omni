@@ -1,0 +1,11 @@
+dev_local     15 条  订单 15 个  assertions 101 条
+prod_sim      20 条  订单 20 个  assertions 140 条
+verify        20 条  订单 20 个  assertions 135 条
+fresh         20 条  订单 20 个  assertions 135 条
+✓ prod_sim∩verify = ∅
+✓ dev_local∩verify = ∅
+✓ dev_local∩prod_sim = ∅
+✓ fresh∩其余 = ∅
+
+✓ 全部校验通过，已写入 /Users/yagrxu/me/collaborations/2026/tfc/self-evolve-demo-with-omni/datasets
+?? datasets/fresh.json

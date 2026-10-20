@@ -1,0 +1,2 @@
+{"n_scenarios": 20, "mean_delta": -0.0143, "ci": [-0.1106, 0.0761], "aa_noise": 0.0934, "flip_resolution": 0.025}
+→ aa_noise 是「什么都没改」时的 Δ 波动；S2 的最小提升必须明显大于它

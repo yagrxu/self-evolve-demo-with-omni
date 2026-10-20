@@ -1,0 +1,23 @@
+[15:39:15] baseline × control 批次 4：20 条 → arn:aws:bedrock-agentcore:us-west-2:613477150601:runtime/selfevolve_demo_order_support-1ReSl92POU
+  [ 1/20] ✓ prod_001  11591ms
+  [ 2/20] ✓ prod_002  12545ms
+  [ 3/20] ✓ prod_003  12769ms
+  [ 4/20] ✓ prod_004  12199ms
+  [ 5/20] ✓ prod_005  71514ms
+  [ 6/20] ✓ prod_006  12105ms
+  [ 7/20] ✓ prod_007  10631ms
+  [ 8/20] ✓ prod_008  12279ms
+  [ 9/20] ✓ prod_009  11714ms
+  [10/20] ✓ prod_010  11415ms
+  [11/20] ✓ prod_011  11912ms
+  [12/20] ✓ prod_012  12889ms
+  [13/20] ✓ prod_013  13147ms
+  [14/20] ✓ prod_014  14220ms
+  [15/20] ✓ prod_015  12956ms
+  [16/20] ✓ prod_016  11392ms
+  [17/20] ✓ prod_017  12334ms
+  [18/20] ✓ prod_018  13540ms
+  [19/20] ✓ prod_019  11099ms
+  [20/20] ✓ prod_020  11632ms
+  ✓ 20/20 成功；窗口 2026-10-20T07:39:15Z – 2026-10-20T07:44:24Z
+[15:44:25] 下一步：05_batch_eval.sh baseline control 4（span 落地需要 1–3 分钟）

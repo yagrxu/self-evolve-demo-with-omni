@@ -22,6 +22,60 @@ export interface EvalStackProps extends StackProps {
 }
 
 /**
+ * 生产在线评估的 evaluator 列表 —— baseline 与所有候选 / 对照 runtime **共用这一份**，
+ * 保证 S2 灰度比较时两边是同一把尺子。
+ *   质量 4 个 + 工具 2 个 + 会话 1 个 + 自定义 PolicyGrounding 1 个
+ */
+export function productionEvaluators(policyGrounding: agentcore.IEvaluator): agentcore.EvaluatorSelector[] {
+  return [
+    // 质量
+    agentcore.EvaluatorSelector.builtin(agentcore.BuiltinEvaluator.CORRECTNESS),
+    agentcore.EvaluatorSelector.builtin(agentcore.BuiltinEvaluator.INSTRUCTION_FOLLOWING),
+    agentcore.EvaluatorSelector.builtin(agentcore.BuiltinEvaluator.HELPFULNESS),
+    agentcore.EvaluatorSelector.builtin(agentcore.BuiltinEvaluator.FAITHFULNESS),
+    // 工具使用
+    agentcore.EvaluatorSelector.builtin(agentcore.BuiltinEvaluator.TOOL_SELECTION_ACCURACY),
+    agentcore.EvaluatorSelector.builtin(agentcore.BuiltinEvaluator.TOOL_PARAMETER_ACCURACY),
+    // 会话级
+    agentcore.EvaluatorSelector.builtin(agentcore.BuiltinEvaluator.GOAL_SUCCESS_RATE),
+    // 自定义 —— 直击 v1 的病根
+    agentcore.EvaluatorSelector.custom(policyGrounding),
+  ];
+}
+
+export interface VariantEvalStackProps extends StackProps {
+  readonly runtime: agentcore.IBedrockAgentRuntime;
+  readonly endpoint: agentcore.IRuntimeEndpoint;
+  /** 例如 cwdemo1_t1_online —— 名字规则 [a-zA-Z][a-zA-Z0-9_]{0,47} */
+  readonly configName: string;
+  /** 生产 eval stack 已建好的 PolicyGrounding evaluator id（复用，不另建一份 rubric） */
+  readonly policyGroundingEvaluatorId: string;
+}
+
+/**
+ * 候选 / 对照 runtime 的默认评估（Online Evaluation）。
+ *
+ * 为什么每个候选 stack 都要带它：生产的 online evaluation config 只绑定 baseline runtime；
+ * 候选是独立 runtime，不建就**不会**被在线评估。S2 灰度（真实流量、没有标准答案）唯一的
+ * 评分来源就是在线评估，所以「部署候选」和「给候选配置默认评估」必须是同一次 CDK 部署。
+ */
+export class VariantEvalStack extends Stack {
+  constructor(scope: Construct, id: string, props: VariantEvalStackProps) {
+    super(scope, id, props);
+    const policyGrounding = agentcore.Evaluator.fromEvaluatorId(this, 'PolicyGrounding', props.policyGroundingEvaluatorId);
+    const onlineEval = new agentcore.OnlineEvaluationConfig(this, 'OnlineEval', {
+      onlineEvaluationConfigName: props.configName,
+      description: `selfevolve-demo 候选 / 对照 runtime 的默认评估（evaluator 与生产一致）`,
+      dataSource: agentcore.DataSourceConfig.fromAgentRuntimeEndpoint(props.runtime, props.endpoint),
+      evaluators: productionEvaluators(policyGrounding),
+      samplingPercentage: 100,
+      executionStatus: agentcore.ExecutionStatus.ENABLED,
+    });
+    new CfnOutput(this, 'OnlineEvalConfigId', { value: onlineEval.onlineEvaluationConfigId });
+  }
+}
+
+/**
  * 云端评估：自定义 evaluator + 对线上流量的持续评估。
  *
  * 为什么把 evaluator 也写进 CDK
@@ -82,20 +136,7 @@ export class EvalStack extends Stack {
       // 比手写 log group 名更稳（log group 名会随 runtime id 变）
       dataSource: agentcore.DataSourceConfig.fromAgentRuntimeEndpoint(props.runtime, props.endpoint),
 
-      evaluators: [
-        // 质量
-        agentcore.EvaluatorSelector.builtin(agentcore.BuiltinEvaluator.CORRECTNESS),
-        agentcore.EvaluatorSelector.builtin(agentcore.BuiltinEvaluator.INSTRUCTION_FOLLOWING),
-        agentcore.EvaluatorSelector.builtin(agentcore.BuiltinEvaluator.HELPFULNESS),
-        agentcore.EvaluatorSelector.builtin(agentcore.BuiltinEvaluator.FAITHFULNESS),
-        // 工具使用
-        agentcore.EvaluatorSelector.builtin(agentcore.BuiltinEvaluator.TOOL_SELECTION_ACCURACY),
-        agentcore.EvaluatorSelector.builtin(agentcore.BuiltinEvaluator.TOOL_PARAMETER_ACCURACY),
-        // 会话级
-        agentcore.EvaluatorSelector.builtin(agentcore.BuiltinEvaluator.GOAL_SUCCESS_RATE),
-        // 自定义 —— 直击 v1 的病根
-        agentcore.EvaluatorSelector.custom(policyGrounding),
-      ],
+      evaluators: productionEvaluators(policyGrounding),
 
       // Demo 要每条流量都有分，所以 100%。生产环境应当调低以控成本。
       samplingPercentage: 100,

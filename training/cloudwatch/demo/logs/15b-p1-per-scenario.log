@@ -1,0 +1,28 @@
+== Builtin.Correctness 失败次数 baseline → p1（每个 scenario 4 批次）
+  prod_001: 0/4 → 3/4
+  prod_003: 1/4 → 1/4
+  prod_004: 1/4 → 0/4
+  prod_005: 3/5 → 1/4
+  prod_008: 3/4 → 0/4
+  prod_010: 0/4 → 2/4
+  prod_011: 1/4 → 1/4
+  prod_012: 1/4 → 2/4
+  prod_013: 3/4 → 1/4
+  prod_014: 3/4 → 0/4
+  prod_015: 1/4 → 2/4
+  prod_016: 0/4 → 1/4
+  prod_017: 2/4 → 2/4
+  prod_018: 1/4 → 3/4
+  prod_020: 3/3 → 4/4
+  合计: 23 → 23
+== Builtin.Helpfulness 失败次数 baseline → p1（每个 scenario 4 批次）
+  prod_001: 0/4 → 1/4
+  prod_003: 1/4 → 1/4
+  prod_005: 1/5 → 2/4
+  prod_008: 1/4 → 0/4
+  prod_011: 0/4 → 1/4
+  prod_015: 0/4 → 2/4
+  prod_016: 0/4 → 3/4
+  prod_018: 0/4 → 1/4
+  prod_020: 0/3 → 2/4
+  合计: 3 → 13

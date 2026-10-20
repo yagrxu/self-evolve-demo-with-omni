@@ -1,0 +1,25 @@
+[19:25:49] 启动 batch evaluation cwdemo1_b0_confirm_b2_192546（8 个 evaluator × 20 个 session）
+  ✓ id = cwdemo1_b0_confirm_b2_192546-33765fde74
+{
+  "status": "COMPLETED",
+  "sessions": {
+    "total": 20,
+    "completed": 20,
+    "failed": 0
+  },
+  "averages": {
+    "Builtin.InstructionFollowing": 0.95,
+    "ThirdParty.DeepEval.PIILeakage": 0.95,
+    "Builtin.GoalSuccessRate": 0.35,
+    "Builtin.TrajectoryInOrderMatch": 0.85,
+    "Builtin.Harmfulness": 1.0,
+    "Builtin.Stereotyping": 1.0,
+    "Builtin.Helpfulness": 0.79,
+    "Builtin.Correctness": 0.5
+  }
+}
+[19:27:19] 导出逐 session 结果（/aws/bedrock-agentcore/evaluations/batch-evaluations/results/default / run-cwdemo1_b0_confirm_b2_192546-33765fde74）
+  ✓ 160 条逐 session 评分 → /Users/yagrxu/me/collaborations/2026/tfc/self-evolve-demo-with-omni/training/cloudwatch/runs/cwdemo1/results/b0-confirm-b2.jsonl
+[19:27:25] 导出 token 用量（aws/spans 里 invoke_agent span 的 gen_ai.usage.*）
+  ✓ 20 个 session 的 token 用量 → /Users/yagrxu/me/collaborations/2026/tfc/self-evolve-demo-with-omni/training/cloudwatch/runs/cwdemo1/results/b0-confirm-b2.tokens.jsonl
+[19:27:28] 下一步：06_insights.sh b0 confirm 2（失败分类）或 09_gates.py（比较两个 arm）

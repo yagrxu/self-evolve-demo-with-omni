@@ -1,0 +1,211 @@
+{
+  "root_causes": [
+    {
+      "failure": "Policy Logic Contradiction and Premature Tool Execution",
+      "sub": "Return Eligibility Misinterpretation",
+      "root_cause": "Reasoning-Action Contradiction in Return Eligibility",
+      "sessions": 6,
+      "fix_type": {
+        "SYSTEM_PROMPT_FIX": 6
+      },
+      "scenarios": {
+        "prod_005": "4/4",
+        "prod_016": "1/4",
+        "prod_002": "1/4"
+      },
+      "recommendation": "Embed explicit eligibility enforcement rules in the system prompt that (1) mandate the agent complete and validate all eligibility checks (return window, damage status, policy overrides) before considering any action tool call, (2) require the agent to halt and communicate ineligibility directly to the user if eligibility checks fail, without proceeding to downstream tools, and (3) establish a strict rule that contradictions between stated reasoning and tool invocation must never occur. Additionally, add instructions requiring the agent to select tools that are consistent with the determined eligibility classification (e.g., exchange-specific tools for exchange-only scenarios) and to request user confirmation on ambiguous conditions before taking irreversible actions."
+    },
+    {
+      "failure": "Policy Logic Contradiction and Premature Tool Execution",
+      "sub": "Premature or Incorrect Return Label Creation Without Proper Eligibility Verification",
+      "root_cause": "Premature Return Action Without Policy Verification",
+      "sessions": 4,
+      "fix_type": {
+        "TOOL_DESCRIPTION_FIX": 1,
+        "SYSTEM_PROMPT_FIX": 3
+      },
+      "scenarios": {
+        "prod_002": "1/4",
+        "prod_005": "2/4",
+        "prod_014": "1/4"
+      },
+      "recommendation": "Enforce a mandatory sequential workflow in the system prompt requiring policy eligibility verification to complete and be explicitly confirmed before any return-creation tool is invoked. Strengthen the system prompt with strict policy-application rules that prohibit inference of undocumented exceptions, require verification of all eligibility conditions (window, damage status, item category) against retrieved policy data, and mandate user clarification on ambiguous conditions before proceeding. Additionally, enhance tool descriptions to document eligibility constraints and error conditions, making the consequences of ineligible invocations explicit to guide the agent's decision-making upstream."
+    },
+    {
+      "failure": "Policy Logic Contradiction and Premature Tool Execution",
+      "sub": "Incorrect Return Type Classification in Shipping Fee Logic",
+      "root_cause": "Incorrect Return-Type Classification in Shipping Refund Logic",
+      "sessions": 4,
+      "fix_type": {
+        "SYSTEM_PROMPT_FIX": 4
+      },
+      "scenarios": {
+        "prod_001": "2/4",
+        "prod_019": "1/4",
+        "prod_020": "1/4"
+      },
+      "recommendation": "Enhance the system prompt with explicit sequential logic: first, require the agent to determine whether a return is full or partial by directly comparing item counts, and second, require the agent to then evaluate the appropriate shipping refund rule based on this correct classification. The prompt should also mandate that shipping refund explanations cite the actual governing policy condition (such as `return_shipping_paid_by` value) rather than defaulting to partial-return justifications. This ensures both reasoning accuracy and customer-facing communication align with actual policy."
+    },
+    {
+      "failure": "Policy Logic Contradiction and Premature Tool Execution",
+      "sub": "Return Eligibility Misinterpretation",
+      "root_cause": "Internal Consistency Failures in Eligibility Reasoning",
+      "sessions": 3,
+      "fix_type": {
+        "SYSTEM_PROMPT_FIX": 3
+      },
+      "scenarios": {
+        "prod_003": "1/4",
+        "prod_008": "1/4",
+        "prod_005": "1/4"
+      },
+      "recommendation": "Embed a mandatory verification gate into the system prompt that requires the agent to numerically compare computed elapsed days against each policy threshold (return window, exchange window, warranty boundary) before stating any eligibility conclusion. The agent must explicitly document the comparison result and ensure the final eligibility verdict is arithmetically consistent with the computed elapsed days—flagging and rejecting any statement that contradicts the numerical analysis. This verification step should be positioned as a mandatory check-before-output rule, ensuring eligibility conclusions always align with stated elapsed-day calculations and policy boundaries."
+    },
+    {
+      "failure": "Policy Logic Contradiction and Premature Tool Execution",
+      "sub": "Return Eligibility Misinterpretation",
+      "root_cause": "Policy Window Boundary Conflation and Misapplication",
+      "sessions": 3,
+      "fix_type": {
+        "SYSTEM_PROMPT_FIX": 3
+      },
+      "scenarios": {
+        "prod_008": "3/4"
+      },
+      "recommendation": "Enhance the system prompt with explicit sequential logic that enforces strict temporal policy windows: (1) compute elapsed days since order date; (2) compare against each policy window threshold in strict order; (3) assign exactly one applicable entitlement (refund, exchange, or none) based on which window the order falls within; (4) explicitly prohibit offering entitlements from one window when the order has entered a different window; (5) forbid inferring penalty-based exceptions or out-of-window remedies not explicitly defined in the retrieved policy. The agent must communicate which window boundary applies and which entitlements are available, without conflating or cross-applying policy rules across boundaries."
+    },
+    {
+      "failure": "Refund Calculation Arithmetic Errors",
+      "sub": "Arithmetic and Calculation Errors in Refund Computation",
+      "root_cause": "Arithmetic errors in multi-step monetary calculations",
+      "sessions": 3,
+      "fix_type": {
+        "SYSTEM_PROMPT_FIX": 3
+      },
+      "scenarios": {
+        "prod_012": "1/4",
+        "prod_015": "1/4",
+        "prod_018": "1/4"
+      },
+      "recommendation": "Enhance the system prompt to mandate step-by-step arithmetic transparency: require the agent to explicitly show intermediate decimal values before applying rounding rules, enforce 2 decimal place rounding at each computational stage according to policy guidelines, and implement a self-verification step where the agent recalculates critical figures before presenting final answers. Additionally, provide clear procedural rules for complex calculations such as coupon proration (e.g., round individual shares first, then assign residual difference to the highest-priced item) to eliminate ambiguity and reduce the likelihood of silent arithmetic failures."
+    },
+    {
+      "failure": "Policy Logic Contradiction and Premature Tool Execution",
+      "sub": "Premature or Incorrect Return Label Creation Without Proper Eligibility Verification",
+      "root_cause": "Premature Case Closure Without Tool Exhaustion",
+      "sessions": 1,
+      "fix_type": {
+        "SYSTEM_PROMPT_FIX": 1
+      },
+      "scenarios": {
+        "prod_016": "1/4"
+      },
+      "recommendation": "Enhance the system prompt with a mandatory pre-deflection checklist requiring the agent to verify all relevant tools have been consulted (e.g., knowledge base searches for exception policies, escalation paths, or edge-case procedures) before concluding that a request cannot be fulfilled. Implement a decision gate that prevents the agent from suggesting external contact or case closure until all available information resources have been exhausted and documented. This ensures customers receive maximum in-channel problem-solving effort before any handoff."
+    },
+    {
+      "failure": "Policy Logic Contradiction and Premature Tool Execution",
+      "sub": "Premature or Incorrect Return Label Creation Without Proper Eligibility Verification",
+      "root_cause": "Partial Quantity Return Without Specification",
+      "sessions": 1,
+      "fix_type": {
+        "SYSTEM_PROMPT_FIX": 1
+      },
+      "scenarios": {
+        "prod_014": "1/4"
+      },
+      "recommendation": "Enhance the system prompt with mandatory steps to: (1) detect when a return request quantity is less than the purchased quantity for any SKU, (2) explicitly confirm the exact quantity to be returned with the customer before tool invocation, and (3) validate that the selected return tool supports quantity-specific parameters. Update tool documentation to clearly specify how quantity constraints are handled and what parameters are required for partial returns."
+    },
+    {
+      "failure": "Policy Logic Contradiction and Premature Tool Execution",
+      "sub": "Incorrect Return Type Classification in Shipping Fee Logic",
+      "root_cause": "Policy Field Conflation in Shipping Logic",
+      "sessions": 1,
+      "fix_type": {
+        "SYSTEM_PROMPT_FIX": 1
+      },
+      "scenarios": {
+        "prod_020": "1/4"
+      },
+      "recommendation": "Enhance the system prompt with explicit instructions that map each policy field to its precise governance scope and prohibit cross-field inference. Specifically, require the agent to treat 'return_shipping_paid_by' (governing return logistics cost responsibility) as distinct from 'shipping_rule' (governing original outbound shipping refundability), and to ground all shipping-fee refund conclusions solely on the appropriate field for the context. Add validation logic or prompt guidance that prevents the agent from substituting one field's semantics for another."
+    },
+    {
+      "failure": "Refund Calculation Arithmetic Errors",
+      "sub": "Arithmetic and Calculation Errors in Refund Computation",
+      "root_cause": "Incorrect Fee Base Selection in Refund Calculations",
+      "sessions": 1,
+      "fix_type": {
+        "SYSTEM_PROMPT_FIX": 1
+      },
+      "scenarios": {
+        "prod_011": "1/4"
+      },
+      "recommendation": "Enhance the system prompt with explicit, unambiguous specifications of the correct monetary baseline for each fee type in the refund workflow. Clearly define the sequence of calculations—which adjustments apply to which values and in what order—so that fees are consistently applied to the intended amount. Include concrete examples in the prompt demonstrating the distinction between list price, post-discount actual paid amount, and other reference values to eliminate ambiguity during agent execution."
+    }
+  ],
+  "by_fix_type": {
+    "SYSTEM_PROMPT_FIX": 26,
+    "TOOL_DESCRIPTION_FIX": 1
+  },
+  "user_intents": [
+    {
+      "name": "Product Quality Issues Return Request",
+      "sessions": 8
+    },
+    {
+      "name": "Return Requests with Shipping Cost Inquiry",
+      "sessions": 8
+    },
+    {
+      "name": "Seafood Product Return Request",
+      "sessions": 4
+    },
+    {
+      "name": "Product Return with Quality Issue",
+      "sessions": 4
+    },
+    {
+      "name": "Partial Return of Bulk Purchase",
+      "sessions": 4
+    },
+    {
+      "name": "Rice Cooker Return Refund Inquiry",
+      "sessions": 4
+    },
+    {
+      "name": "Book Return with Full Refund Request",
+      "sessions": 4
+    },
+    {
+      "name": "Return Eligibility Inquiry with Time Delay",
+      "sessions": 12
+    },
+    {
+      "name": "Partial Return with Refund Inquiry",
+      "sessions": 4
+    },
+    {
+      "name": "Partial Return with Refund Calculation",
+      "sessions": 4
+    },
+    {
+      "name": "Running Shoes Return Request",
+      "sessions": 4
+    },
+    {
+      "name": "Refund Calculation with Coupon Deduction",
+      "sessions": 8
+    },
+    {
+      "name": "Aesthetic/Style Mismatch Product Return",
+      "sessions": 4
+    },
+    {
+      "name": "Simple Product Return Request - Machine Learning Book",
+      "sessions": 4
+    },
+    {
+      "name": "Damaged Product Return Request",
+      "sessions": 4
+    }
+  ]
+}

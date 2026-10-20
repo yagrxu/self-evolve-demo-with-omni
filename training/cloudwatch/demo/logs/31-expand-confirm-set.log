@@ -1,0 +1,16 @@
+{
+  "stage": "S1",
+  "decided_at": "2026-10-20T11:31:36.669632+00:00",
+  "by": "user",
+  "reason": "用户决定（2026-10-20）：S1 要求 ≥40 个 scenario，confirm（fresh）只有 20 个；并入 verify 集 20 题（ORD-102xx，本 run 从未用于诊断或挑选候选；2026-09 的另一个 run 中曾被 c5 观察过，与 t1 无关）。门禁与校准不变；只补跑 b0 与 t1 在 verify 上的 2 个批次。",
+  "added_sets": [
+    "confirm2"
+  ],
+  "results_seen_for_added_sets": []
+}
+[19:31:38] 创建 dataset cwdemo1_confirm2（20 条，来自 datasets/verify.json）
+  ✓ 创建：cwdemo1_confirm2-UQESIz4qva
+  ✓ 读回核对：20 条
+  ✓ 版本：1
+  ✓ 云上 scenario_id 集合与文件一致
+[19:31:51] 下一步：04_traffic.sh baseline control 1

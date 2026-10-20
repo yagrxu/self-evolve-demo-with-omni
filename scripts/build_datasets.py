@@ -126,6 +126,33 @@ VERIFY_SPECS = [
 ]
 
 
+# 2026-10-19 新增的**最终确认集**（ORD-103xx）。在 run strands_agents-20261019T040348Z
+# 的任何候选生成之前创建，从未被任何 run 观察过 —— verify 已在 2026-09 的 run 中被 c5 观察过，
+# 不再满足「从未见过」。订单结构/日期镜像 verify 的原型分布，商品与金额全部不同。
+FRESH_SPECS = [
+    ("ORD-10301", "refund_in_window",      "充电器我想退掉，能退回多少钱？", None),
+    ("ORD-10302", "exchange_only",         "骨传导耳机夹得头疼，想退货行吗？", None),
+    ("ORD-10303", "expired_warranty",      "折叠屏手机我想退了，现在还能退吗？", None),
+    ("ORD-10304", "apparel_in_window",     "九分裤腰围小了，我想退，运费谁承担？", None),
+    ("ORD-10305", "apparel_expired",       "那件呢大衣我想退掉", None),
+    ("ORD-10306", "books_in_window",       "分布式那本书想退，能全额退吗？", None),
+    ("ORD-10307", "home_in_window",        "电热水壶有塑料味，想退，实际能退多少？", None),
+    ("ORD-10308", "home_exchange",         "床头柜颜色和床不搭，我要退货", None),
+    ("ORD-10309", "perishable_no_return",  "车厘子我不想要了，能退款吗？", None),
+    ("ORD-10310", "perishable_damaged",    "羊排到的时候包装破了还有异味，怎么处理？", None),
+    ("ORD-10311", "coupon_single",         "平板笔记本想退，下单时用了 500 的券，能退我多少？", None),
+    ("ORD-10312", "coupon_partial_multi",  "键盘留着，两根 DP 线都退，退多少？", [{"sku": "CB-HD2-F", "qty": 2}]),
+    ("ORD-10313", "damaged_out_of_window", "餐边柜送来柜门就是裂的，一直没顾上处理，现在还能退吗？", None),
+    ("ORD-10316", "multi_qty_partial",     "两个充电宝我退一个", [{"sku": "PB-20K-F", "qty": 1}]),
+    ("ORD-10315", "mixed_category_full",   "电视和底座都退，用了 450 的券，一共退多少？", None),
+    ("ORD-10317", "books_expired",         "计算机网络那本书我想退", None),
+    ("ORD-10318", "home_exchange",         "洗碗机尺寸不对放不进去，要退货", None),
+    ("ORD-10319", "coupon_partial_multi",  "帽子留着，两袋袜子都退，能退多少？", [{"sku": "TT-CT09-F", "qty": 2}]),
+    ("ORD-10320", "home_in_window",        "除湿机声音太吵，想退，能退多少钱？", None),
+    ("ORD-10314", "apparel_full_return",   "切尔西靴有处开胶，我要退，运费怎么算？", None),
+]
+
+
 # ── oracle 渲染 ────────────────────────────────────────────────────────────
 
 
@@ -311,6 +338,7 @@ DATASETS = {
     "dev_local": (DEV_SPECS, "dev", "Phase 2 本地基线数据集：15 条覆盖 15 类退换货原型"),
     "prod_sim": (PROD_SPECS, "prod", "Phase 3 云上流量模拟数据集：20 条，模拟真实用户请求"),
     "verify": (VERIFY_SPECS, "vfy", "Phase 6 held-out 验证数据集：20 条，订单与前两份完全不相交"),
+    "fresh": (FRESH_SPECS, "frs", "最终确认集：20 条 ORD-103xx，2026-10-19 在候选生成之前创建，从未被观察过"),
 }
 
 
@@ -353,8 +381,10 @@ def main() -> int:
     overlap_pv = all_orders["prod_sim"] & all_orders["verify"]
     overlap_dv = all_orders["dev_local"] & all_orders["verify"]
     overlap_dp = all_orders["dev_local"] & all_orders["prod_sim"]
+    overlap_f = all_orders["fresh"] & (all_orders["dev_local"] | all_orders["prod_sim"]
+                                       | all_orders["verify"])
     for label, ov in (("prod_sim∩verify", overlap_pv), ("dev_local∩verify", overlap_dv),
-                      ("dev_local∩prod_sim", overlap_dp)):
+                      ("dev_local∩prod_sim", overlap_dp), ("fresh∩其余", overlap_f)):
         if ov:
             problems.append(f"数据集订单重叠 {label}: {sorted(ov)}")
         else:

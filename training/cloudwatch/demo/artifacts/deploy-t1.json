@@ -1,0 +1,1 @@
+{"arm":"t1","stack":"selfevolve-demo-agent-t1","runtime_arn":"arn:aws:bedrock-agentcore:us-west-2:613477150601:runtime/selfevolve_demo_order_support_t1-pOfuBW665N","prompts":"training/cloudwatch/baseline/prompts.json","tool_tier":"enhanced"}

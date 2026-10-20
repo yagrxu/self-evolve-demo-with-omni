@@ -1,0 +1,87 @@
+# t1 = 只改 Tool 层：AGENT_TOOL_TIER=enhanced（增加 check_return_eligibility / calculate_refund / get_coupon_allocation），prompt 仍为 baseline v1
+[18:06:29] 打包 agent（Direct Code Deploy，依赖 vendored 进 zip）
+ERROR: pip's dependency resolver does not currently take into account all the packages that are installed. This behaviour is the source of the following dependency conflicts.
+opentelemetry-instrumentation-boto 0.61b0 requires opentelemetry-instrumentation==0.61b0, but you have opentelemetry-instrumentation 0.65b0 which is incompatible.
+opentelemetry-instrumentation-boto 0.61b0 requires opentelemetry-semantic-conventions==0.61b0, but you have opentelemetry-semantic-conventions 0.65b0 which is incompatible.
+fastapi 0.115.0 requires starlette<0.39.0,>=0.37.2, but you have starlette 1.9.0 which is incompatible.
+opentelemetry-instrumentation-elasticsearch 0.61b0 requires opentelemetry-instrumentation==0.61b0, but you have opentelemetry-instrumentation 0.65b0 which is incompatible.
+opentelemetry-instrumentation-elasticsearch 0.61b0 requires opentelemetry-semantic-conventions==0.61b0, but you have opentelemetry-semantic-conventions 0.65b0 which is incompatible.
+opentelemetry-instrumentation-elasticsearch 0.61b0 requires wrapt<2.0.0,>=1.0.0, but you have wrapt 2.5.1 which is incompatible.
+jsii 1.130.0 requires attrs<26.0,>=21.2, but you have attrs 26.1.0 which is incompatible.
+aws-gameday-quests 1.1.43 requires click==8.1.8, but you have click 8.5.0 which is incompatible.
+aws-gameday-quests 1.1.43 requires pyyaml==6.0.1, but you have pyyaml 6.0.3 which is incompatible.
+
+[notice] A new release of pip is available: 26.1.1 -> 26.2.1
+[notice] To update, run: pip install --upgrade pip
+    （保留 *.dist-info —— ADOT 的 entry point 发现依赖它，见脚本内注释）
+==> 冒烟检查
+    ✓ ADOT entry points 可发现（57 个）
+==> 完成：/Users/yagrxu/me/collaborations/2026/tfc/self-evolve-demo-with-omni/agent/.build  ( 99M, 5352 个文件, platform=manylinux2014_aarch64)
+  ✓ prompt 版本：order_support-v1 c76023c4c730bed04360602ce9f22ce9
+AI agent detected
+77 feature flags are not configured. Run 'cdk flags --unstable=flags' to learn more.
+  ✓ 已合成 cdk/cdk.out/selfevolve-demo-agent-t1.template.json（未部署）
+t1 runtime env: {'AGENT_PROMPT_VARIANT': 't1', 'AGENT_TOOL_TIER': 'enhanced'}
+# 部署
+[18:07:18] 打包 agent（Direct Code Deploy，依赖 vendored 进 zip）
+ERROR: pip's dependency resolver does not currently take into account all the packages that are installed. This behaviour is the source of the following dependency conflicts.
+opentelemetry-instrumentation-boto 0.61b0 requires opentelemetry-instrumentation==0.61b0, but you have opentelemetry-instrumentation 0.65b0 which is incompatible.
+opentelemetry-instrumentation-boto 0.61b0 requires opentelemetry-semantic-conventions==0.61b0, but you have opentelemetry-semantic-conventions 0.65b0 which is incompatible.
+fastapi 0.115.0 requires starlette<0.39.0,>=0.37.2, but you have starlette 1.9.0 which is incompatible.
+opentelemetry-instrumentation-elasticsearch 0.61b0 requires opentelemetry-instrumentation==0.61b0, but you have opentelemetry-instrumentation 0.65b0 which is incompatible.
+opentelemetry-instrumentation-elasticsearch 0.61b0 requires opentelemetry-semantic-conventions==0.61b0, but you have opentelemetry-semantic-conventions 0.65b0 which is incompatible.
+opentelemetry-instrumentation-elasticsearch 0.61b0 requires wrapt<2.0.0,>=1.0.0, but you have wrapt 2.5.1 which is incompatible.
+jsii 1.130.0 requires attrs<26.0,>=21.2, but you have attrs 26.1.0 which is incompatible.
+aws-gameday-quests 1.1.43 requires click==8.1.8, but you have click 8.5.0 which is incompatible.
+aws-gameday-quests 1.1.43 requires pyyaml==6.0.1, but you have pyyaml 6.0.3 which is incompatible.
+
+[notice] A new release of pip is available: 26.1.1 -> 26.2.1
+[notice] To update, run: pip install --upgrade pip
+    （保留 *.dist-info —— ADOT 的 entry point 发现依赖它，见脚本内注释）
+==> 冒烟检查
+    ✓ ADOT entry points 可发现（57 个）
+==> 完成：/Users/yagrxu/me/collaborations/2026/tfc/self-evolve-demo-with-omni/agent/.build  ( 99M, 5352 个文件, platform=manylinux2014_aarch64)
+  ✓ prompt 版本：order_support-v1 c76023c4c730bed04360602ce9f22ce9
+[18:07:50] 部署 selfevolve-demo-agent-t1
+AI agent detected
+
+✨  Synthesis time: 11.42s
+
+selfevolve-demo-agent-t1: start: Building Runtime/AgentRuntimeArtifact
+selfevolve-demo-agent-t1: success: Built Runtime/AgentRuntimeArtifact
+selfevolve-demo-agent-t1: start: Building selfevolve-demo-agent-t1 Template
+selfevolve-demo-agent-t1: success: Built selfevolve-demo-agent-t1 Template
+selfevolve-demo-agent-t1: start: Publishing Runtime/AgentRuntimeArtifact (613477150601-us-west-2-5faf33a9)
+selfevolve-demo-agent-t1: start: Publishing selfevolve-demo-agent-t1 Template (613477150601-us-west-2-abff51ca)
+selfevolve-demo-agent-t1: success: Published selfevolve-demo-agent-t1 Template (613477150601-us-west-2-abff51ca)
+selfevolve-demo-agent-t1: success: Published Runtime/AgentRuntimeArtifact (613477150601-us-west-2-5faf33a9)
+selfevolve-demo-agent-t1: creating CloudFormation changeset...
+selfevolve-demo-agent-t1: deploying... [1/1]
+
+✅  selfevolve-demo-agent-t1
+
+✨  Deployment time: 99.51s
+
+Outputs:
+selfevolve-demo-agent-t1.ApplicationLogGroup = /aws/bedrock-agentcore/runtimes/selfevolve_demo_order_support_t1-pOfuBW665N-DEFAULT
+selfevolve-demo-agent-t1.EndpointName = v1
+selfevolve-demo-agent-t1.ExecutionRoleArn = arn:aws:iam::613477150601:role/selfevolve_demo_order_support_t1-exec-us-west-2
+selfevolve-demo-agent-t1.PromptVariant = t1
+selfevolve-demo-agent-t1.RuntimeArn = arn:aws:bedrock-agentcore:us-west-2:613477150601:runtime/selfevolve_demo_order_support_t1-pOfuBW665N
+selfevolve-demo-agent-t1.RuntimeId = selfevolve_demo_order_support_t1-pOfuBW665N
+Stack ARN:
+arn:aws:cloudformation:us-west-2:613477150601:stack/selfevolve-demo-agent-t1/30a45160-cc6e-11f1-873d-02350b2ed76f
+
+✨  Total time: 141.06s
+
+{
+    "name": "selfevolve_demo_order_support_t1",
+    "status": "READY",
+    "version": "1",
+    "entry": [
+        "opentelemetry-instrument",
+        "agent.py"
+    ]
+}
+  ✓ t1 已部署：arn:aws:bedrock-agentcore:us-west-2:613477150601:runtime/selfevolve_demo_order_support_t1-pOfuBW665N
+[18:10:16] 下一步：02_verify_observability.sh t1

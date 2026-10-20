@@ -1,0 +1,19 @@
+[15:23:03] 工具
+  ✓ aws CLI 2.38.1 · jq · python3 · node
+  ✓ CLI 含 batch evaluation / dataset / recommendation 命令
+[15:23:05] 身份与 region
+{
+    "account": "613477150601",
+    "arn": "arn:aws:iam::613477150601:user/yagrxu"
+}
+  ✓ region = us-west-2
+[15:23:06] Transaction Search（OTel span → CloudWatch Logs aws/spans）
+  ✓ destination=CloudWatchLogs status=ACTIVE
+Default	100.0
+  ✓ log group aws/spans 存在
+[15:23:11] Bedrock 模型可用性
+  ✓ us.anthropic.claude-haiku-4-5-20251001-v1:0 在 us-west-2 可用
+[15:23:14] 数据集文件
+  ✓ datasets/prod_sim.json：20 条
+  ✓ datasets/fresh.json：20 条
+[15:23:14] 通过。下一步：01_deploy.sh baseline

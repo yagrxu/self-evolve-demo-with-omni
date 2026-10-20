@@ -1,0 +1,84 @@
+{
+  "order_support": {
+    "messages": [
+      {
+        "id": "1",
+        "role": "system",
+        "content": "你是一个电商平台的售后客服助手。请友好、简洁地回答用户关于退换货的问题，让用户满意。\n先依据工具返回的订单和政策判定资格，只给一个结论，前后不得矛盾；超出退货窗口时直接说明不能退款，只提供政策允许的换新或保修路径，不暗示例外。可以退款时写出每件可退金额、原始运费是否退还及退款合计（元）。"
+      },
+      {
+        "id": "2",
+        "role": "user",
+        "content": "{{input}}"
+      }
+    ],
+    "model": {
+      "providerId": "bedrock",
+      "modelId": "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "parameters": {
+        "temperature": 0.3,
+        "max_tokens": 1024
+      }
+    },
+    "history": [
+      {
+        "version": 1,
+        "versionId": "order_support-v1",
+        "timestamp": 1789655148202,
+        "commitMessage": "feat: baseline prompt (故意做弱, 作为 self-evolution 的起点)",
+        "messages": [
+          {
+            "id": "1",
+            "role": "system",
+            "content": "你是一个电商平台的售后客服助手。请友好、简洁地回答用户关于退换货的问题，让用户满意。"
+          },
+          {
+            "id": "2",
+            "role": "user",
+            "content": "{{input}}"
+          }
+        ],
+        "model": {
+          "providerId": "bedrock",
+          "modelId": "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+          "parameters": {
+            "temperature": 0.3,
+            "max_tokens": 1024
+          }
+        },
+        "labels": [
+          "baseline"
+        ]
+      },
+      {
+        "version": 2,
+        "versionId": "p1",
+        "timestamp": 1792489318128,
+        "commitMessage": "training candidate p1",
+        "messages": [
+          {
+            "id": "1",
+            "role": "system",
+            "content": "你是一个电商平台的售后客服助手。请友好、简洁地回答用户关于退换货的问题，让用户满意。\n先依据工具返回的订单和政策判定资格，只给一个结论，前后不得矛盾；超出退货窗口时直接说明不能退款，只提供政策允许的换新或保修路径，不暗示例外。可以退款时写出每件可退金额、原始运费是否退还及退款合计（元）。"
+          },
+          {
+            "id": "2",
+            "role": "user",
+            "content": "{{input}}"
+          }
+        ],
+        "model": {
+          "providerId": "bedrock",
+          "modelId": "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+          "parameters": {
+            "temperature": 0.3,
+            "max_tokens": 1024
+          }
+        },
+        "labels": [
+          "candidate"
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,36 @@
+# baseline 已于 2026-09-18 用 CDK 部署（本 demo 不重新部署生产 runtime，只核对）
+{
+    "stack": "selfevolve-demo-agent",
+    "status": "CREATE_COMPLETE",
+    "created": "2026-09-18T05:46:44.174000+00:00",
+    "outputs": [
+        [
+            "EndpointName",
+            "v1"
+        ],
+        [
+            "RuntimeArn",
+            "arn:aws:bedrock-agentcore:us-west-2:613477150601:runtime/selfevolve_demo_order_support-1ReSl92POU"
+        ]
+    ]
+}
+{
+    "name": "selfevolve_demo_order_support",
+    "status": "READY",
+    "version": "1",
+    "entry": [
+        "opentelemetry-instrument",
+        "agent.py"
+    ],
+    "code": "2d33f498ed689468e484ed19165739903346a51c51e90ac0a65246620184af3e.zip"
+}
+# synth-only：用训练包里的 v1 prompts 合成 baseline 模板
+AI agent detected
+77 feature flags are not configured. Run 'cdk flags --unstable=flags' to learn more.
+  ✓ 已合成 cdk/cdk.out/selfevolve-demo-agent.template.json（未部署）
+synth 模板与已部署模板一致（忽略 asset hash）: False
+# 包内 prompt 与线上 v1 的 S3 包是否同一份 prompt
+order_support-v1
+# 修正后重新合成（01_deploy.sh 曾把 AGENT_PROMPT_VARIANT 覆盖为 baseline —— 会改动线上 env，已修）
+  ✓ 已合成 cdk/cdk.out/selfevolve-demo-agent.template.json（未部署）
+synth 模板与已部署模板一致（忽略 asset hash）: True

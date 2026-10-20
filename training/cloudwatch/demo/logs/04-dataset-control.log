@@ -1,0 +1,6 @@
+[15:26:03] 创建 dataset cwdemo1_control（20 条，来自 datasets/prod_sim.json）
+  ✓ 创建：cwdemo1_control-EQgQ179Q3o
+  ✓ 读回核对：20 条
+  ✓ 版本：1
+  ✓ 云上 scenario_id 集合与文件一致
+[15:26:17] 下一步：04_traffic.sh baseline control 1

@@ -12,6 +12,8 @@ import {
   PROMPT_VARIANT,
   PYTHON_RUNTIME,
   RUNTIME_NAME,
+  TOOL_TIER,
+  VARIANT_SUFFIX,
 } from './config';
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
@@ -149,6 +151,8 @@ export class AgentStack extends Stack {
         // 固定"今天"，保证云上和本地算出的 oracle 完全一致
         DEMO_AS_OF_DATE: '2026-09-17',
         LOG_LEVEL: 'INFO',
+        // 只有显式切到 enhanced 时才出现 —— 见 config.ts 的 TOOL_TIER
+        ...(TOOL_TIER !== 'basic' ? { AGENT_TOOL_TIER: TOOL_TIER } : {}),
       },
 
       lifecycleConfiguration: {
@@ -170,7 +174,7 @@ export class AgentStack extends Stack {
       description: '给 scripts/traffic.py 用的 runtime id',
       // CFN 导出名只允许字母数字/冒号/连字符 —— 不能用 RUNTIME_NAME
       // （AgentCore 的 runtime 名规则要求下划线，两边规则冲突）
-      exportName: `${PREFIX}-runtime-id`,
+      exportName: `${PREFIX}${VARIANT_SUFFIX ? '-' + VARIANT_SUFFIX.replace(/_/g, '-') : ''}-runtime-id`,
     });
     new CfnOutput(this, 'EndpointName', { value: this.endpoint.endpointName });
     new CfnOutput(this, 'ApplicationLogGroup', {

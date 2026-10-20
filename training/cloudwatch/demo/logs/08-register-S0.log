@@ -1,0 +1,18 @@
+{
+  "stage": "S0",
+  "question": "值得继续吗（control，筛选）",
+  "min_scenarios": 20,
+  "mean_delta_min": 0.0,
+  "ci_lower_min": -0.1,
+  "per_dim_min": -0.1,
+  "token_pct_max": 15,
+  "latency_pct_max": 10,
+  "safety_new_failures_max": 0,
+  "feasibility": {
+    "aa_ci_halfwidth": 0.0934,
+    "ci_lower_min": -0.1,
+    "reachable": true,
+    "advice": ""
+  }
+}
+✓ 已登记 training/cloudwatch/runs/cwdemo1/gates.registered.S0.json（2026-10-20T09:41:39.907966+00:00）—— 从现在起不得修改

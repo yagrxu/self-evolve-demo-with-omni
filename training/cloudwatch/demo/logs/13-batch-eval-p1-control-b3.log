@@ -1,0 +1,25 @@
+[18:03:16] 启动 batch evaluation cwdemo1_p1_control_b3_180313（8 个 evaluator × 20 个 session）
+  ✓ id = cwdemo1_p1_control_b3_180313-9d1eacdd2e
+{
+  "status": "COMPLETED",
+  "sessions": {
+    "total": 20,
+    "completed": 20,
+    "failed": 0
+  },
+  "averages": {
+    "Builtin.InstructionFollowing": 1.0,
+    "Builtin.GoalSuccessRate": 0.45,
+    "ThirdParty.DeepEval.PIILeakage": 0.97,
+    "Builtin.TrajectoryInOrderMatch": 0.95,
+    "Builtin.Harmfulness": 1.0,
+    "Builtin.Stereotyping": 1.0,
+    "Builtin.Helpfulness": 0.72,
+    "Builtin.Correctness": 0.6
+  }
+}
+[18:05:08] 导出逐 session 结果（/aws/bedrock-agentcore/evaluations/batch-evaluations/results/default / run-cwdemo1_p1_control_b3_180313-9d1eacdd2e）
+  ✓ 160 条逐 session 评分 → /Users/yagrxu/me/collaborations/2026/tfc/self-evolve-demo-with-omni/training/cloudwatch/runs/cwdemo1/results/p1-control-b3.jsonl
+[18:05:14] 导出 token 用量（aws/spans 里 invoke_agent span 的 gen_ai.usage.*）
+  ✓ 20 个 session 的 token 用量 → /Users/yagrxu/me/collaborations/2026/tfc/self-evolve-demo-with-omni/training/cloudwatch/runs/cwdemo1/results/p1-control-b3.tokens.jsonl
+[18:05:17] 下一步：06_insights.sh p1 control 3（失败分类）或 09_gates.py（比较两个 arm）

@@ -1,0 +1,48 @@
+[21:40:57] 生产 config selfevolve_demo_online_eval-b8cUsWHGnR 的 evaluator 列表（照抄，保证同一把尺子）
+    Builtin.Correctness
+    Builtin.InstructionFollowing
+    Builtin.Helpfulness
+    Builtin.Faithfulness
+    Builtin.ToolSelectionAccuracy
+    Builtin.ToolParameterAccuracy
+    Builtin.GoalSuccessRate
+    selfevolve_demo_PolicyGrounding-IS7lH859gB
+  role   : selfevolve-demo-online-eval-cwdemo1-b0
+  log grp: /aws/bedrock-agentcore/runtimes/selfevolve_demo_order_support_b0-apsocPA1AM-v1
+  service: selfevolve_demo_order_support_b0.v1
+  ✓ 已建执行角色 selfevolve-demo-online-eval-cwdemo1-b0
+[21:41:04] 等待 IAM 生效（15s）
+{
+  "id": "cwdemo1_b0_online-Dwy3m663if",
+  "status": "CREATING",
+  "executionStatus": "ENABLED",
+  "out": "/aws/bedrock-agentcore/evaluations/results/cwdemo1_b0_online-Dwy3m663if"
+}
+[21:41:24] 生产 config selfevolve_demo_online_eval-b8cUsWHGnR 的 evaluator 列表（照抄，保证同一把尺子）
+    Builtin.Correctness
+    Builtin.InstructionFollowing
+    Builtin.Helpfulness
+    Builtin.Faithfulness
+    Builtin.ToolSelectionAccuracy
+    Builtin.ToolParameterAccuracy
+    Builtin.GoalSuccessRate
+    selfevolve_demo_PolicyGrounding-IS7lH859gB
+  role   : selfevolve-demo-online-eval-cwdemo1-t1
+  log grp: /aws/bedrock-agentcore/runtimes/selfevolve_demo_order_support_t1-pOfuBW665N-v1
+  service: selfevolve_demo_order_support_t1.v1
+  ✓ 已建执行角色 selfevolve-demo-online-eval-cwdemo1-t1
+[21:41:30] 等待 IAM 生效（15s）
+{
+  "id": "cwdemo1_t1_online-u1h5Fx3mCv",
+  "status": "CREATING",
+  "executionStatus": "ENABLED",
+  "out": "/aws/bedrock-agentcore/evaluations/results/cwdemo1_t1_online-u1h5Fx3mCv"
+}
+[21:42:29] 调用 b0（session cwt-cwdemo1-b0-smoke-b0-0-0-0-0-0）
+  ✓ 调用成功
+  ✓ span 已落地：11 条，含 invoke_agent / execute_tool / chat
+  按 session 过滤：cwt-cwdemo1-b0-smoke-b0-0-0-0-0-0
+[21:43:05] 调用 t1（session cwt-cwdemo1-t1-smoke-b0-0-0-0-0-0）
+  ✓ 调用成功
+  ✓ span 已落地：15 条，含 invoke_agent / execute_tool / chat
+  按 session 过滤：cwt-cwdemo1-t1-smoke-b0-0-0-0-0-0

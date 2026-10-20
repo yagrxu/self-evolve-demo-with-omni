@@ -1,0 +1,31 @@
+[17:32:56] 启动 insight 分析 cwdemo1_baseline_control_insight_173254（80 个 session，批次 1 2 3 4）
+  ✓ id = cwdemo1_baseline_control_insight_173254-c6ec93dd38
+  （汇总脚本修正：affectedSessions 按 session 去重后重算，SUMMARIZE_ONLY=1，未重新分析）
+  ✓ 沿用 /Users/yagrxu/me/collaborations/2026/tfc/self-evolve-demo-with-omni/training/cloudwatch/runs/cwdemo1/insights/baseline-control.result.json
+
+修复层分布（按受影响 session 计）：
+  SYSTEM_PROMPT_FIX: 26
+  TOOL_DESCRIPTION_FIX: 1
+
+根因（按普遍性排序）：
+  [6] Reasoning-Action Contradiction in Return Eligibility  → SYSTEM_PROMPT_FIX
+       scenario: prod_005 4/4, prod_016 1/4, prod_002 1/4
+  [4] Premature Return Action Without Policy Verification  → SYSTEM_PROMPT_FIX,TOOL_DESCRIPTION_FIX
+       scenario: prod_002 1/4, prod_005 2/4, prod_014 1/4
+  [4] Incorrect Return-Type Classification in Shipping Refund Logic  → SYSTEM_PROMPT_FIX
+       scenario: prod_001 2/4, prod_019 1/4, prod_020 1/4
+  [3] Internal Consistency Failures in Eligibility Reasoning  → SYSTEM_PROMPT_FIX
+       scenario: prod_003 1/4, prod_008 1/4, prod_005 1/4
+  [3] Policy Window Boundary Conflation and Misapplication  → SYSTEM_PROMPT_FIX
+       scenario: prod_008 3/4
+  [3] Arithmetic errors in multi-step monetary calculations  → SYSTEM_PROMPT_FIX
+       scenario: prod_012 1/4, prod_015 1/4, prod_018 1/4
+  [1] Premature Case Closure Without Tool Exhaustion  → SYSTEM_PROMPT_FIX
+       scenario: prod_016 1/4
+  [1] Partial Quantity Return Without Specification  → SYSTEM_PROMPT_FIX
+       scenario: prod_014 1/4
+  [1] Policy Field Conflation in Shipping Logic  → SYSTEM_PROMPT_FIX
+       scenario: prod_020 1/4
+  [1] Incorrect Fee Base Selection in Refund Calculations  → SYSTEM_PROMPT_FIX
+       scenario: prod_011 1/4
+[17:41:22] 产物：/Users/yagrxu/me/collaborations/2026/tfc/self-evolve-demo-with-omni/training/cloudwatch/runs/cwdemo1/insights/baseline-control.classification.json。下一步：人工复核 trace 后决定本轮只改哪一层 → 07_recommend.sh 或手写候选

@@ -1,0 +1,33 @@
+{
+  "what": "A/A：同一个 baseline 的两组独立批次互相比较。理想值 Δ=0；偏离多少就是噪声有多大。",
+  "set": "control",
+  "a_batches": [
+    1,
+    2
+  ],
+  "b_batches": [
+    3,
+    4
+  ],
+  "n_scenarios": 20,
+  "mean_delta": -0.0143,
+  "ci": [
+    -0.1106,
+    0.0761
+  ],
+  "better": 10,
+  "worse": 7,
+  "per_dim_delta": {
+    "Builtin.Correctness": 0.0083,
+    "Builtin.Helpfulness": -0.0012,
+    "Builtin.GoalSuccessRate": -0.05,
+    "Builtin.InstructionFollowing": 0.025,
+    "Builtin.TrajectoryInOrderMatch": 0.025
+  },
+  "safety_new_failures": [],
+  "latency_pct": 4.66,
+  "token_pct": -3.07,
+  "flip_resolution": 0.025,
+  "aa_noise": 0.0934,
+  "at": "2026-10-20T09:32:54.598859+00:00"
+}

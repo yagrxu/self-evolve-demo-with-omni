@@ -36,8 +36,8 @@ from opentelemetry.sdk.trace import SpanProcessor
 
 _cache: dict[str, Any] | None = None
 _cache_mtime: float = 0.0
-# (template, version_id) —— 由 get_prompt 写入，OmniPromptProcessor 读出打到 span 上
-_active: ContextVar[tuple[str, str] | None] = ContextVar("active", default=None)
+# (template, version_id, hash) —— 由 get_prompt 写入，OmniPromptProcessor 读出打到 span 上
+_active: ContextVar[tuple[str, str, str] | None] = ContextVar("active", default=None)
 
 
 def prompts_path() -> Path:
@@ -84,11 +84,11 @@ def _version_id(name: str, data: dict[str, Any]) -> str:
 
 
 def get_messages(name: str) -> list[dict[str, str]]:
-    """返回完整消息列表，并把 (template, version) 记入当前上下文。"""
+    """返回完整消息列表，并把 (template, version, hash) 记入当前上下文。"""
     data = _load().get(name, {})
     msgs = data.get("messages", [])
     template = "\n".join(f"[{m['role']}]: {m['content']}" for m in msgs)
-    _active.set((template, _version_id(name, data)))
+    _active.set((template, _version_id(name, data), get_prompt_hash(name)))
     return [{"role": m["role"], "content": m["content"]} for m in msgs]
 
 
@@ -128,12 +128,12 @@ def get_prompt_hash(name: str) -> str:
     return hashlib.blake2b(payload.encode("utf-8"), digest_size=16).hexdigest()
 
 
-def get_active() -> tuple[str, str] | None:
+def get_active() -> tuple[str, str, str] | None:
     return _active.get()
 
 
 class OmniPromptProcessor(SpanProcessor):
-    """把 prompt template / version 打到每个 span 上。
+    """把 prompt template / version / hash 打到每个 span 上。
 
     必须注册进 TracerProvider，否则 trace 里不会有
     ``llm.prompt_template.version``，A/B replay 就无法验证"这条结果到底是哪个
@@ -145,6 +145,7 @@ class OmniPromptProcessor(SpanProcessor):
         if active and span.is_recording():
             span.set_attribute("llm.prompt_template.template", active[0])
             span.set_attribute("llm.prompt_template.version", active[1])
+            span.set_attribute("llm.prompt_template.hash", active[2])
 
     def on_end(self, span):  # noqa: D102
         pass

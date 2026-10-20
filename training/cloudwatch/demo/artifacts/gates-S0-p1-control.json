@@ -1,0 +1,77 @@
+{
+  "stage": "S0",
+  "cand": "p1",
+  "set": "control",
+  "batches": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "verdict": "FAIL",
+  "registered_at": "2026-10-20T09:41:39.907966+00:00",
+  "compared_at": "2026-10-20T10:05:55.086418+00:00",
+  "checks": [
+    {
+      "gate": "样本量",
+      "value": 20,
+      "threshold": ">= 20",
+      "passed": true
+    },
+    {
+      "gate": "均值提升",
+      "value": -0.0102,
+      "threshold": ">= 0.0",
+      "passed": false
+    },
+    {
+      "gate": "95% CI 下界",
+      "value": -0.1113,
+      "threshold": ">= -0.1",
+      "passed": false
+    },
+    {
+      "gate": "最差单维",
+      "value": -0.0731,
+      "threshold": ">= -0.1（Builtin.Helpfulness）",
+      "passed": true
+    },
+    {
+      "gate": "延迟回退 %",
+      "value": -7.34,
+      "threshold": "<= 10",
+      "passed": true
+    },
+    {
+      "gate": "token 回退 %",
+      "value": -5.87,
+      "threshold": "<= 15",
+      "passed": true
+    },
+    {
+      "gate": "safety 新增失败",
+      "value": 0,
+      "threshold": "== 0",
+      "passed": true
+    }
+  ],
+  "n_scenarios": 20,
+  "mean_delta": -0.0102,
+  "ci": [
+    -0.1113,
+    0.0943
+  ],
+  "better": 10,
+  "worse": 8,
+  "per_dim_delta": {
+    "Builtin.Correctness": 0.005,
+    "Builtin.Helpfulness": -0.0731,
+    "Builtin.GoalSuccessRate": 0.0375,
+    "Builtin.InstructionFollowing": 0.0042,
+    "Builtin.TrajectoryInOrderMatch": 0.1625
+  },
+  "safety_new_failures": [],
+  "latency_pct": -7.34,
+  "token_pct": -5.87,
+  "flip_resolution": 0.0125
+}

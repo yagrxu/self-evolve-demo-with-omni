@@ -55,3 +55,6 @@ runs/
 
 # macOS
 .DS_Store
+
+# training 流程的运行产物（含 agent 回答与 trace，不入库）
+training/*/runs/

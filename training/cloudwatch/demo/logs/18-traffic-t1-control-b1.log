@@ -1,0 +1,23 @@
+[18:11:31] t1 × control 批次 1：20 条 → arn:aws:bedrock-agentcore:us-west-2:613477150601:runtime/selfevolve_demo_order_support_t1-pOfuBW665N
+  [ 1/20] ✓ prod_001  12020ms
+  [ 2/20] ✓ prod_002  10922ms
+  [ 3/20] ✓ prod_003  11460ms
+  [ 4/20] ✓ prod_004  11474ms
+  [ 5/20] ✓ prod_005  10685ms
+  [ 6/20] ✓ prod_006  11641ms
+  [ 7/20] ✓ prod_007  13466ms
+  [ 8/20] ✓ prod_008  12174ms
+  [ 9/20] ✓ prod_009  10106ms
+  [10/20] ✓ prod_010  10889ms
+  [11/20] ✓ prod_011  11804ms
+  [12/20] ✓ prod_012  11550ms
+  [13/20] ✓ prod_013  11084ms
+  [14/20] ✓ prod_014  13159ms
+  [15/20] ✓ prod_015  11524ms
+  [16/20] ✓ prod_016  12764ms
+  [17/20] ✓ prod_017  10659ms
+  [18/20] ✓ prod_018  12182ms
+  [19/20] ✓ prod_019  11963ms
+  [20/20] ✓ prod_020  11825ms
+  ✓ 20/20 成功；窗口 2026-10-20T10:11:31Z – 2026-10-20T10:15:29Z
+[18:15:30] 下一步：05_batch_eval.sh t1 control 1（span 落地需要 1–3 分钟）

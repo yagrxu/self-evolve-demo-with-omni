@@ -1,0 +1,23 @@
+[18:52:18] baseline × confirm 批次 1：20 条 → arn:aws:bedrock-agentcore:us-west-2:613477150601:runtime/selfevolve_demo_order_support-1ReSl92POU
+  [ 1/20] ✓ frs_001  10576ms
+  [ 2/20] ✓ frs_002  10907ms
+  [ 3/20] ✓ frs_003  11261ms
+  [ 4/20] ✓ frs_004  10921ms
+  [ 5/20] ✓ frs_005   9800ms
+  [ 6/20] ✓ frs_006   9716ms
+  [ 7/20] ✓ frs_007  11446ms
+  [ 8/20] ✓ frs_008  11416ms
+  [ 9/20] ✓ frs_009  10420ms
+  [10/20] ✓ frs_010  12889ms
+  [11/20] ✓ frs_011  11375ms
+  [12/20] ✓ frs_012   8873ms
+  [13/20] ✓ frs_013  10915ms
+  [14/20] ✓ frs_014   9413ms
+  [15/20] ✓ frs_015   9512ms
+  [16/20] ✓ frs_016   9073ms
+  [17/20] ✓ frs_017  10963ms
+  [18/20] ✓ frs_018   9034ms
+  [19/20] ✓ frs_019  11476ms
+  [20/20] ✓ frs_020  11044ms
+  ✓ 20/20 成功；窗口 2026-10-20T10:52:18Z – 2026-10-20T10:55:54Z
+[18:55:54] 下一步：05_batch_eval.sh baseline confirm 1（span 落地需要 1–3 分钟）

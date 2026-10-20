@@ -1,0 +1,23 @@
+[18:10:54] 调用 t1（session cwt-cwdemo1-t1-smoke-b0-0-0-0-0-0）
+**退款明细：**
+
+| 项目 | 金额 |
+|------|------|
+| 无线鼠标原价 | ¥159.00 |
+  ✓ 调用成功
+[18:11:05] 等待 span 落地到 aws/spans（最多 5 分钟）
+   1 AgentCore.Runtime.Invoke
+   3 chat
+   3 chat us.anthropic.claude-haiku-4-5-20251001-v1:0
+   3 execute_event_loop_cycle
+   1 execute_tool calculate_refund
+   1 execute_tool check_return_eligibility
+   1 execute_tool get_order
+   1 invoke_agent Strands Agents
+   1 POST /invocations
+  ✓ span 已落地：15 条，含 invoke_agent / execute_tool / chat
+
+在控制台查看（截图用）：
+  CloudWatch → GenAI Observability → Bedrock AgentCore → Agents → selfevolve_demo_order_support_t1
+  https://console.aws.amazon.com/cloudwatch/home?region=us-west-2#/gen-ai-observability/agent-core
+  按 session 过滤：cwt-cwdemo1-t1-smoke-b0-0-0-0-0-0

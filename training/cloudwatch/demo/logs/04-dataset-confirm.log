@@ -1,0 +1,6 @@
+[15:26:18] 创建 dataset cwdemo1_confirm（20 条，来自 datasets/fresh.json）
+  ✓ 创建：cwdemo1_confirm-7Xh65nH8MX
+  ✓ 读回核对：20 条
+  ✓ 版本：1
+  ✓ 云上 scenario_id 集合与文件一致
+[15:26:25] 下一步：04_traffic.sh baseline control 1

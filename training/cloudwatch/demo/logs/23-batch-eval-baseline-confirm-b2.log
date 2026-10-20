@@ -1,0 +1,25 @@
+[19:09:16] 启动 batch evaluation cwdemo1_baseline_confirm_b2_190914（8 个 evaluator × 20 个 session）
+  ✓ id = cwdemo1_baseline_confirm_b2_190914-e45d51f778
+{
+  "status": "COMPLETED",
+  "sessions": {
+    "total": 20,
+    "completed": 20,
+    "failed": 0
+  },
+  "averages": {
+    "Builtin.InstructionFollowing": 1.0,
+    "ThirdParty.DeepEval.PIILeakage": 0.96,
+    "Builtin.GoalSuccessRate": 0.05,
+    "Builtin.TrajectoryInOrderMatch": 0.7,
+    "Builtin.Harmfulness": 1.0,
+    "Builtin.Stereotyping": 1.0,
+    "Builtin.Helpfulness": 0.82,
+    "Builtin.Correctness": 0.05
+  }
+}
+[19:10:46] 导出逐 session 结果（/aws/bedrock-agentcore/evaluations/batch-evaluations/results/default / run-cwdemo1_baseline_confirm_b2_190914-e45d51f778）
+  ✓ 160 条逐 session 评分 → /Users/yagrxu/me/collaborations/2026/tfc/self-evolve-demo-with-omni/training/cloudwatch/runs/cwdemo1/results/baseline-confirm-b2.jsonl
+[19:10:51] 导出 token 用量（aws/spans 里 invoke_agent span 的 gen_ai.usage.*）
+  ✓ 20 个 session 的 token 用量 → /Users/yagrxu/me/collaborations/2026/tfc/self-evolve-demo-with-omni/training/cloudwatch/runs/cwdemo1/results/baseline-confirm-b2.tokens.jsonl
+[19:10:54] 下一步：06_insights.sh baseline confirm 2（失败分类）或 09_gates.py（比较两个 arm）

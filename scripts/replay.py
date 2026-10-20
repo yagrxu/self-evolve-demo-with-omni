@@ -51,6 +51,10 @@ def prompts_path_for(variant: str, run_dir: Path) -> Path:
     """变体 id → 那份独立的 prompts.json。baseline 用仓库里的原件。"""
     if variant == BASELINE_ID:
         return REPO / "agent" / "prompts.json"
+    # 新 run 把候选放在自己的 run 目录里（与该 run 的证据一起审计）；旧 run 用共享目录
+    local = run_dir / "candidates" / variant / "prompts.json"
+    if local.exists():
+        return local
     return REPO / ".omni" / "self-evolution" / "candidates" / variant / "prompts.json"
 
 
@@ -182,13 +186,15 @@ def _match_session(ids: list[str], session_id: str) -> tuple[str | None, str | N
     return None, None, None
 
 
-def replay_variant(variant: str, examples: list[dict], reps: int, run_dir: Path) -> list[dict]:
+def replay_variant(variant: str, examples: list[dict], reps: int, run_dir: Path,
+                   set_name: str = "control") -> list[dict]:
     override = None if variant == BASELINE_ID else prompts_path_for(variant, run_dir)
     want = expected_version(variant, run_dir)
     print(f"\n── arm `{variant}`（期望 prompt 版本 `{want}`）")
     start_server(override)
 
-    out_dir = run_dir / "runs" / variant
+    # control 沿用 runs/；其他集合分开存放，避免 holdout / fresh 覆盖 control 的记录
+    out_dir = run_dir / ("runs" if set_name == "control" else f"runs-{set_name}") / variant
     out_dir.mkdir(parents=True, exist_ok=True)
     records: list[dict] = []
 
@@ -262,7 +268,7 @@ def replay_variant(variant: str, examples: list[dict], reps: int, run_dir: Path)
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--run", required=True, help=".omni/self-evolution/ 下的 run_id")
-    ap.add_argument("--set", default="control", choices=["control", "holdout", "verify"])
+    ap.add_argument("--set", default="control", choices=["control", "holdout", "verify", "fresh"])
     ap.add_argument("--repetitions", type=int, default=3)
     ap.add_argument("--variants", default="", help="逗号分隔；默认 baseline + 全部候选")
     args = ap.parse_args()
@@ -274,7 +280,9 @@ def main() -> int:
     if not examples:
         raise SystemExit(f"{args.set}.json 是空的")
 
-    cand_dir = REPO / ".omni" / "self-evolution" / "candidates"
+    cand_dir = run_dir / "candidates"
+    if not cand_dir.exists():
+        cand_dir = REPO / ".omni" / "self-evolution" / "candidates"
     variants = ([v.strip() for v in args.variants.split(",") if v.strip()]
                 or [BASELINE_ID] + sorted(p.name for p in cand_dir.iterdir() if p.is_dir()))
     if BASELINE_ID not in variants:
@@ -294,7 +302,7 @@ def main() -> int:
     started = datetime.now(timezone.utc)
     all_records: dict[str, list[dict]] = {}
     for v in variants:
-        all_records[v] = replay_variant(v, examples, args.repetitions, run_dir)
+        all_records[v] = replay_variant(v, examples, args.repetitions, run_dir, args.set)
 
     meta = {
         "run_id": args.run, "set": args.set, "variants": variants,

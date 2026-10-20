@@ -1,0 +1,20 @@
+{
+  "stage": "S0",
+  "decided_at": "2026-10-20T10:51:50.684368+00:00",
+  "by": "user",
+  "reason": "用户决定（2026-10-20）：接受 t1 的三项未通过 —— ①TrajectoryInOrderMatch：期望轨迹按 basic 工具层写，对 Tool 层候选不成立（测量设计问题），不计入逐维门；②PIILeakage：判官把订单号/金额判为隐私泄露，视为误报，改为仅报告；③token +50.5%：工具调用与逐项金额带来的真实成本，业务可接受，预算放宽到 55%。其余门（均值、CI、延迟、样本量）不变。",
+  "calibrated_after_results": true,
+  "results_seen_before_decision": [
+    "gates-S0-p1-control.json",
+    "gates-S0-t1-control.json"
+  ],
+  "overrides": {
+    "exclude_per_dim": [
+      "Builtin.TrajectoryInOrderMatch"
+    ],
+    "safety_report_only": [
+      "ThirdParty.DeepEval.PIILeakage"
+    ],
+    "token_pct_max": 55.0
+  }
+}
