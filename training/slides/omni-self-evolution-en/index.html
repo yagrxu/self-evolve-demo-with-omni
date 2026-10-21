@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Improving Agents with Evidence, in the IDE — CloudWatch Omni</title>
+
+<!-- Fonts: Urbanist (display) · Albert Sans (body) · Noto Sans SC (CJK) · JetBrains Mono (code) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@500;700;800&family=Albert+Sans:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<!-- Icons: Lucide -->
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<!-- Speaker info (edit speaker.js, not the HTML) -->
+<script src="speaker.js"></script>
+
+<style>
+/* ===========================================
+   CSS CUSTOM PROPERTIES (THEME) — re:Invent Keynote
+   =========================================== */
+:root {
+    --bg-primary: #0A0A0A;
+    --bg-gradient: linear-gradient(135deg, #1A0033 0%, #2D0066 40%, #7C3AED 100%);
+    --accent-purple: #8B5CF6;
+    --accent-pink: #D946EF;
+    --accent-orange: #FF9900;
+    --accent-blue: #3B82F6;
+    --accent-green: #34D399;
+    --text-primary: #FFFFFF;
+    --text-secondary: rgba(255, 255, 255, 0.62);
+    --glow-purple: rgba(139, 92, 246, 0.4);
+    --card-bg: rgba(139, 92, 246, 0.08);
+    --card-border: rgba(139, 92, 246, 0.25);
+    --code-bg: rgba(8, 4, 20, 0.85);
+
+    --font-display: 'Urbanist', 'Noto Sans SC', sans-serif;
+    --font-body: 'Albert Sans', 'Noto Sans SC', sans-serif;
+    --font-mono: 'JetBrains Mono', 'Noto Sans SC', monospace;
+
+    --subtitle-size: clamp(0.85rem, 1.8vw, 1.25rem);
+    --code-size: clamp(0.55rem, 0.95vw, 0.82rem);
+
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    --duration-normal: 0.7s;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* ===========================================
+   VIEWPORT FITTING: MANDATORY BASE STYLES (viewport-base.css, full)
+   =========================================== */
+html, body { height: 100%; overflow-x: hidden; scrollbar-width: none; }
+html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; }
+html { scroll-snap-type: y mandatory; scroll-behavior: smooth; }
+.slide {
+    width: 100vw; height: 100vh; height: 100dvh; overflow: hidden;
+    scroll-snap-align: start; display: flex; flex-direction: column; position: relative;
+}
+.slide-content {
+    flex: 1; display: flex; flex-direction: column; justify-content: center;
+    max-height: 100%; overflow: hidden; padding: var(--slide-padding);
+    position: relative; z-index: 1;
+}
+:root {
+    --title-size: clamp(1.5rem, 5vw, 4rem);
+    --h2-size: clamp(1.25rem, 3.2vw, 2.4rem);
+    --h3-size: clamp(0.95rem, 1.9vw, 1.4rem);
+    --body-size: clamp(0.75rem, 1.35vw, 1.06rem);
+    --small-size: clamp(0.62rem, 0.95vw, 0.85rem);
+    --slide-padding: clamp(1rem, 4vw, 4rem);
+    --content-gap: clamp(0.5rem, 2vw, 1.8rem);
+    --element-gap: clamp(0.25rem, 1vw, 1rem);
+}
+.card, .container, .content-box { max-width: min(90vw, 1000px); max-height: min(80vh, 700px); }
+.feature-list, .bullet-list { gap: clamp(0.4rem, 1vh, 1rem); }
+.feature-list li, .bullet-list li { font-size: var(--body-size); line-height: 1.4; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: clamp(0.5rem, 1.5vw, 1rem); }
+img, .image-container { max-width: 100%; max-height: min(50vh, 400px); object-fit: contain; }
+@media (max-height: 700px) {
+    :root { --slide-padding: clamp(0.75rem, 3vw, 2rem); --content-gap: clamp(0.4rem, 1.5vw, 1rem);
+            --title-size: clamp(1.25rem, 4.5vw, 2.5rem); --h2-size: clamp(1rem, 3vw, 1.75rem); }
+}
+@media (max-height: 600px) {
+    :root { --slide-padding: clamp(0.5rem, 2.5vw, 1.5rem); --content-gap: clamp(0.3rem, 1vw, 0.75rem);
+            --title-size: clamp(1.1rem, 4vw, 2rem); --body-size: clamp(0.7rem, 1.2vw, 0.95rem); }
+    .nav-dots, .keyboard-hint, .decorative { display: none; }
+}
+@media (max-height: 500px) {
+    :root { --slide-padding: clamp(0.4rem, 2vw, 1rem); --title-size: clamp(1rem, 3.5vw, 1.5rem);
+            --h2-size: clamp(0.9rem, 2.5vw, 1.25rem); --body-size: clamp(0.65rem, 1vw, 0.85rem); }
+}
+@media (max-width: 600px) { :root { --title-size: clamp(1.25rem, 7vw, 2.5rem); } .grid { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.2s !important; }
+    html { scroll-behavior: auto; }
+}
+
+/* ===========================================
+   BASE TYPOGRAPHY & BACKGROUND
+   =========================================== */
+body { background: var(--bg-primary); color: var(--text-primary); font-family: var(--font-body); -webkit-font-smoothing: antialiased; }
+code, .mono { font-family: var(--font-mono); }
+.hl-o { color: var(--accent-orange); }
+.hl-p { color: #c4b5fd; }
+.hl-g { color: var(--accent-green); }
+
+/* ===========================================
+   REVEAL ANIMATIONS
+   =========================================== */
+.reveal { opacity: 0; transform: translateY(25px); transition: opacity var(--duration-normal) var(--ease-out-expo), transform var(--duration-normal) var(--ease-out-expo); }
+.slide.visible .reveal { opacity: 1; transform: translateY(0); }
+.slide.visible .reveal.d1 { transition-delay: 0.1s; } .slide.visible .reveal.d2 { transition-delay: 0.2s; }
+.slide.visible .reveal.d3 { transition-delay: 0.3s; } .slide.visible .reveal.d4 { transition-delay: 0.4s; }
+.slide.visible .reveal.d5 { transition-delay: 0.5s; } .slide.visible .reveal.d6 { transition-delay: 0.6s; }
+.slide.visible .reveal.d7 { transition-delay: 0.7s; }
+
+/* ===========================================
+   FLOATING ORBS (content slides)
+   =========================================== */
+.floating-orb { position: absolute; border-radius: 50%; pointer-events: none; z-index: 0; filter: blur(20px); }
+.orb-purple { background: radial-gradient(circle, rgba(139,92,246,0.35) 0%, rgba(139,92,246,0) 70%); }
+.orb-pink { background: radial-gradient(circle, rgba(217,70,239,0.3) 0%, rgba(217,70,239,0) 70%); }
+.orb-blue { background: radial-gradient(circle, rgba(59,130,246,0.25) 0%, rgba(59,130,246,0) 70%); }
+@keyframes orbFloat1 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(20px,-30px) scale(1.05); } }
+@keyframes orbFloat2 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-25px,20px) scale(0.95); } }
+@keyframes orbFloat3 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(15px,25px) scale(1.03); } }
+
+/* ===========================================
+   SECTION LABEL / TITLE
+   =========================================== */
+.section-label { font-family: var(--font-body); font-size: var(--small-size); font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent-purple); margin-bottom: clamp(0.3rem, 0.7vw, 0.55rem); }
+.section-title { font-family: var(--font-display); font-size: var(--h2-size); font-weight: 800; line-height: 1.15; margin-bottom: clamp(0.3rem, 0.8vw, 0.7rem); }
+.section-title em { font-style: normal; background: linear-gradient(135deg, #a78bfa, #e879f9); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.section-desc { font-size: var(--body-size); color: var(--text-secondary); line-height: 1.65; }
+.center { text-align: center; }
+
+/* ===========================================
+   LAYOUT 1: TITLE / DIVIDER SLIDE (animated blobs)
+   =========================================== */
+.title-slide { background: #0B0015; }
+.title-slide::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 90% 90% at 50% 50%, transparent 40%, rgba(11,0,21,0.6) 100%); pointer-events: none; z-index: 0; }
+.title-slide .slide-content { align-items: center; text-align: center; gap: clamp(0.6rem, 1.5vw, 1.2rem); }
+.title-label { font-size: var(--small-size); font-weight: 500; letter-spacing: 0.35em; text-transform: uppercase; color: rgba(255,255,255,0.6); }
+.title-main { font-family: var(--font-display); font-size: var(--title-size); font-weight: 900; line-height: 1.12; letter-spacing: -0.01em; text-shadow: 0 0 30px rgba(139,92,246,0.3), 0 0 80px rgba(139,92,246,0.15); }
+.title-main em { font-style: normal; display: inline-block; background: linear-gradient(135deg, #a78bfa, #e879f9, #f472b6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; filter: drop-shadow(0 0 25px rgba(217,70,239,0.5)) drop-shadow(0 0 60px rgba(139,92,246,0.3)); }
+.title-accent { width: clamp(40px, 5vw, 56px); height: 3px; background: linear-gradient(90deg, var(--accent-orange), var(--accent-pink)); border-radius: 2px; box-shadow: 0 0 12px rgba(255,153,0,0.4), 0 0 30px rgba(217,70,239,0.2); }
+.title-sub { font-size: var(--subtitle-size); color: rgba(255,255,255,0.68); max-width: min(90vw, 720px); line-height: 1.6; }
+.speaker-info { font-size: var(--subtitle-size); color: rgba(255,255,255,0.7); margin-top: clamp(0.3rem, 0.6vw, 0.5rem); letter-spacing: 0.05em; }
+.blob-canvas { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+.blob { position: absolute; border-radius: 50%; filter: blur(80px); will-change: transform, opacity; }
+@keyframes blob1 { 0% { transform: translate(0,0) scale(1); background: rgba(139,92,246,0.55); } 25% { transform: translate(8vw,-12vh) scale(1.2); background: rgba(217,70,239,0.6); } 50% { transform: translate(-5vw,8vh) scale(0.9); background: rgba(59,130,246,0.5); } 75% { transform: translate(12vw,5vh) scale(1.15); background: rgba(236,72,153,0.55); } 100% { transform: translate(0,0) scale(1); background: rgba(139,92,246,0.55); } }
+@keyframes blob2 { 0% { transform: translate(0,0) scale(1); background: rgba(217,70,239,0.45); } 33% { transform: translate(-10vw,6vh) scale(1.15); background: rgba(139,92,246,0.5); } 66% { transform: translate(6vw,-8vh) scale(0.85); background: rgba(236,72,153,0.45); } 100% { transform: translate(0,0) scale(1); background: rgba(217,70,239,0.45); } }
+@keyframes blob3 { 0% { transform: translate(0,0) scale(1); background: rgba(59,80,200,0.4); } 50% { transform: translate(10vw,10vh) scale(1.2); background: rgba(139,92,246,0.45); } 100% { transform: translate(0,0) scale(1); background: rgba(59,80,200,0.4); } }
+@keyframes blob4 { 0% { transform: translate(0,0) scale(1); background: rgba(236,72,153,0.3); } 50% { transform: translate(-8vw,-6vh) scale(1.1); background: rgba(255,153,0,0.18); } 100% { transform: translate(0,0) scale(1); background: rgba(236,72,153,0.3); } }
+
+/* ===========================================
+   LAYOUT 2: CONTENT LAYOUT (left title + right pill cards)
+   =========================================== */
+.content-layout { display: grid; grid-template-columns: 2fr 3fr; gap: clamp(1.5rem, 4.5vw, 4rem); align-items: center; width: 100%; max-width: min(92vw, 1200px); margin: 0 auto; }
+@media (max-width: 768px) { .content-layout { grid-template-columns: 1fr; } }
+.pill-cards { display: flex; flex-direction: column; gap: clamp(0.35rem, 0.85vw, 0.6rem); }
+.pill-card { display: flex; align-items: center; gap: clamp(0.6rem, 1.2vw, 1rem); padding: clamp(0.55rem, 1.15vw, 0.85rem) clamp(0.8rem, 1.5vw, 1.2rem); background: var(--card-bg); border: 1px solid var(--card-border); border-radius: clamp(10px, 1.2vw, 14px); transition: border-color 0.3s, box-shadow 0.3s; }
+.pill-card:hover { border-color: rgba(139,92,246,0.45); box-shadow: 0 0 25px rgba(139,92,246,0.15); }
+.pill-icon { width: clamp(28px, 3vw, 36px); height: clamp(28px, 3vw, 36px); border-radius: clamp(6px, 0.8vw, 10px); flex-shrink: 0; background: linear-gradient(135deg, rgba(139,92,246,0.2), rgba(217,70,239,0.12)); display: flex; align-items: center; justify-content: center; }
+.pill-icon svg { width: 55%; height: 55%; stroke: var(--accent-purple); fill: none; stroke-width: 2; }
+.pill-text { font-size: var(--body-size); font-weight: 600; line-height: 1.35; }
+.pill-text span { color: var(--text-secondary); font-weight: 400; font-size: var(--small-size); display: block; margin-top: 0.15em; }
+
+/* ===========================================
+   LAYOUT 3: STATS ROW + FEATURE GRID
+   =========================================== */
+.stats-row { display: flex; width: 100%; max-width: min(92vw, 1000px); border: 1px solid var(--card-border); border-radius: clamp(10px, 1.2vw, 14px); background: var(--card-bg); overflow: hidden; margin: 0 auto; }
+.stat-item { flex: 1; text-align: center; padding: clamp(0.5rem, 1.3vw, 1.05rem) clamp(0.4rem, 1vw, 0.9rem); border-right: 1px solid rgba(139,92,246,0.15); }
+.stat-item:last-child { border-right: none; }
+.stat-value { font-family: var(--font-display); font-size: clamp(1.25rem, 3.2vw, 2.4rem); font-weight: 800; line-height: 1.1; background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.stat-label { font-size: var(--small-size); color: var(--text-secondary); letter-spacing: 0.04em; margin-top: 0.2em; }
+.features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(0.4rem, 1vw, 0.7rem); width: 100%; max-width: min(92vw, 1000px); margin: 0 auto; }
+@media (max-width: 768px) { .features-grid { grid-template-columns: 1fr; } }
+.feature-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: clamp(8px, 1vw, 12px); padding: clamp(0.6rem, 1.3vw, 1rem); transition: border-color 0.3s, box-shadow 0.3s; }
+.feature-card:hover { border-color: rgba(139,92,246,0.4); box-shadow: 0 0 25px rgba(139,92,246,0.12); }
+.feat-icon { width: clamp(24px, 2.6vw, 32px); height: clamp(24px, 2.6vw, 32px); border-radius: clamp(5px, 0.7vw, 8px); background: linear-gradient(135deg, rgba(139,92,246,0.18), rgba(217,70,239,0.1)); display: flex; align-items: center; justify-content: center; margin-bottom: clamp(0.25rem, 0.6vw, 0.45rem); color: var(--accent-purple); }
+.feat-icon svg { width: 60%; height: 60%; }
+.feature-card h3 { font-family: var(--font-display); font-size: var(--h3-size); font-weight: 800; margin-bottom: clamp(0.1rem, 0.3vw, 0.2rem); }
+.feature-card p { font-size: var(--small-size); color: var(--text-secondary); line-height: 1.5; }
+
+/* ===========================================
+   LAYOUT 5: PIPELINE COLUMNS
+   =========================================== */
+.pipeline-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: clamp(0.4rem, 1vw, 0.8rem); width: 100%; max-width: min(92vw, 1150px); margin: 0 auto; }
+.pipeline-col { text-align: center; background: rgba(255,255,255,0.02); border-radius: 10px; padding: clamp(0.4rem, 0.9vw, 0.7rem); }
+.pipeline-col-title { font-family: var(--font-display); font-size: var(--body-size); font-weight: 800; margin-bottom: clamp(0.3rem, 0.6vw, 0.5rem); line-height: 1.3; }
+.pipeline-bar { height: clamp(3px, 0.5vw, 5px); border-radius: 3px; margin-bottom: clamp(0.4rem, 0.8vw, 0.6rem); }
+.pipeline-items { display: flex; flex-direction: column; gap: clamp(0.25rem, 0.5vw, 0.4rem); }
+.pipeline-items span { font-size: var(--small-size); color: var(--text-secondary); line-height: 1.35; }
+.pipeline-footer { width: 100%; max-width: min(92vw, 1150px); margin: 0 auto; text-align: center; font-size: var(--small-size); color: var(--text-secondary); letter-spacing: 0.06em; padding-top: clamp(0.5rem, 1vw, 0.8rem); border-top: 1px solid rgba(255,255,255,0.1); }
+@media (max-width: 768px) { .pipeline-row { grid-template-columns: repeat(2, 1fr); } }
+
+/* ===========================================
+   LAYOUT 9: PROCESS FLOW (6 steps)
+   =========================================== */
+.process-row { display: flex; align-items: flex-start; width: 100%; max-width: min(94vw, 1200px); margin: 0 auto; position: relative; }
+.process-step { flex: 1; text-align: center; position: relative; padding: 0 clamp(0.25rem, 0.7vw, 0.55rem); }
+.step-num { width: clamp(34px, 4.2vw, 52px); height: clamp(34px, 4.2vw, 52px); border-radius: 50%; margin: 0 auto clamp(0.4rem, 0.8vw, 0.6rem); display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: var(--h3-size); font-weight: 800; background: linear-gradient(135deg, rgba(139,92,246,0.25), rgba(217,70,239,0.18)); border: 1px solid var(--card-border); position: relative; z-index: 1; box-shadow: 0 0 18px rgba(139,92,246,0.25); }
+.process-step:not(:last-child)::after { content: ''; position: absolute; top: clamp(17px, 2.1vw, 26px); left: calc(50% + clamp(20px, 2.5vw, 30px)); width: calc(100% - clamp(40px, 5vw, 60px)); height: 1px; background: linear-gradient(90deg, rgba(139,92,246,0.45), rgba(217,70,239,0.3)); z-index: 0; }
+.step-title { font-family: var(--font-display); font-size: var(--body-size); font-weight: 800; margin-bottom: clamp(0.15rem, 0.35vw, 0.3rem); line-height: 1.3; }
+.step-desc { font-size: var(--small-size); color: var(--text-secondary); line-height: 1.45; }
+.step-tag { display: inline-block; margin-top: clamp(0.25rem, 0.5vw, 0.4rem); font-size: clamp(0.55rem, 0.8vw, 0.72rem); color: var(--accent-orange); border: 1px solid rgba(255,153,0,0.35); border-radius: 99px; padding: 0.1em 0.6em; }
+@media (max-width: 768px) { .process-row { flex-direction: column; gap: 0.8rem; align-items: center; } .process-step { width: 100%; max-width: 320px; } .process-step:not(:last-child)::after { display: none; } }
+
+/* ===========================================
+   LAYOUT 8: COMPARISON SPLIT
+   =========================================== */
+.compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(0.8rem, 2vw, 1.5rem); width: 100%; max-width: min(92vw, 1100px); margin: 0 auto; }
+.compare-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: clamp(10px, 1.2vw, 16px); padding: clamp(0.9rem, 2vw, 1.6rem); }
+.compare-card-title { font-family: var(--font-display); font-size: var(--h3-size); font-weight: 800; margin-bottom: clamp(0.5rem, 1vw, 0.8rem); display: flex; align-items: center; gap: clamp(0.3rem, 0.6vw, 0.5rem); }
+.compare-dot { width: clamp(8px, 1vw, 12px); height: clamp(8px, 1vw, 12px); border-radius: 50%; flex-shrink: 0; }
+.compare-list { list-style: none; display: flex; flex-direction: column; gap: clamp(0.3rem, 0.7vw, 0.5rem); }
+.compare-list li { font-size: var(--small-size); color: var(--text-secondary); padding-left: clamp(0.8rem, 1.5vw, 1.2rem); position: relative; line-height: 1.5; }
+.compare-list li b { color: var(--text-primary); font-weight: 600; }
+.compare-list li::before { content: ''; position: absolute; left: 0; top: 0.55em; width: clamp(4px, 0.5vw, 6px); height: clamp(4px, 0.5vw, 6px); border-radius: 50%; background: var(--accent-purple); }
+@media (max-width: 768px) { .compare-grid { grid-template-columns: 1fr; } }
+
+/* ===========================================
+   THEMED TABLE
+   =========================================== */
+.table-wrap { width: 100%; max-width: min(94vw, 1150px); margin: 0 auto; border: 1px solid var(--card-border); border-radius: clamp(10px, 1.2vw, 14px); overflow: hidden; background: rgba(139,92,246,0.04); }
+table.themed { width: 100%; border-collapse: collapse; font-size: var(--small-size); }
+table.themed th { text-align: left; font-family: var(--font-display); font-weight: 800; letter-spacing: 0.03em; padding: clamp(0.35rem, 0.8vw, 0.6rem) clamp(0.5rem, 1vw, 0.9rem); background: linear-gradient(90deg, rgba(139,92,246,0.22), rgba(217,70,239,0.12)); color: #fff; }
+table.themed td { padding: clamp(0.3rem, 0.7vw, 0.52rem) clamp(0.5rem, 1vw, 0.9rem); border-top: 1px solid rgba(139,92,246,0.14); color: var(--text-secondary); line-height: 1.4; vertical-align: top; }
+table.themed td:first-child { color: var(--text-primary); font-weight: 600; white-space: nowrap; }
+table.themed code { font-size: 0.92em; color: #c4b5fd; }
+.ok { color: var(--accent-green) !important; font-weight: 700; }
+.bad { color: #fb7185 !important; font-weight: 700; }
+.warn { color: var(--accent-orange) !important; font-weight: 700; }
+
+/* ===========================================
+   CODE CARDS (custom for this deck)
+   =========================================== */
+.code-grid { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(0.6rem, 1.4vw, 1.1rem); width: 100%; max-width: min(94vw, 1200px); margin: 0 auto; }
+.code-grid.one { grid-template-columns: 1fr; }
+.code-grid.side { grid-template-columns: 3fr 2fr; }
+@media (max-width: 900px) { .code-grid, .code-grid.side { grid-template-columns: 1fr; } }
+.code-card { background: var(--code-bg); border: 1px solid var(--card-border); border-radius: clamp(10px, 1.1vw, 14px); overflow: hidden; box-shadow: 0 0 30px rgba(139,92,246,0.08); }
+.code-head { display: flex; align-items: center; gap: 0.5em; padding: clamp(0.3rem, 0.7vw, 0.5rem) clamp(0.6rem, 1.1vw, 0.9rem); border-bottom: 1px solid rgba(139,92,246,0.18); font-size: var(--small-size); color: var(--text-secondary); }
+.code-head b { color: #fff; font-family: var(--font-display); font-weight: 800; letter-spacing: 0.02em; }
+.code-dots { display: flex; gap: 4px; margin-right: 0.3em; }
+.code-dots i { width: 7px; height: 7px; border-radius: 50%; display: block; background: rgba(255,255,255,0.18); }
+.code-dots i:first-child { background: #fb7185; } .code-dots i:nth-child(2) { background: #fbbf24; } .code-dots i:nth-child(3) { background: #34d399; }
+pre.code { margin: 0; padding: clamp(0.5rem, 1vw, 0.85rem) clamp(0.6rem, 1.1vw, 0.95rem); font-family: var(--font-mono); font-size: var(--code-size); line-height: 1.55; color: #e9e3ff; white-space: pre; overflow: hidden; }
+pre.code .c { color: rgba(255,255,255,0.38); }     /* comment */
+pre.code .k { color: #f0abfc; }                    /* command / keyword */
+pre.code .s { color: #86efac; }                    /* string */
+pre.code .f { color: #fdba74; }                    /* flag */
+.pit-list { list-style: none; display: flex; flex-direction: column; gap: clamp(0.3rem, 0.7vw, 0.5rem); padding: clamp(0.5rem, 1vw, 0.85rem) clamp(0.7rem, 1.2vw, 1rem); }
+.pit-list li { font-size: var(--small-size); color: var(--text-secondary); line-height: 1.45; padding-left: 1.3em; position: relative; }
+.pit-list li::before { content: '!'; position: absolute; left: 0; top: 0; width: 1em; height: 1em; font-size: 0.8em; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(255,153,0,0.2); color: var(--accent-orange); font-weight: 800; margin-top: 0.15em; }
+.pit-list li b { color: #fff; font-weight: 600; }
+
+
+/* ===========================================
+   DOC LINKS (AWS documentation)
+   =========================================== */
+.doc-links { display: flex; flex-wrap: wrap; justify-content: center; gap: clamp(0.3rem, 0.7vw, 0.55rem); width: 100%; max-width: min(94vw, 1200px); margin: 0 auto; }
+.doc-link { display: inline-flex; align-items: center; gap: 0.4em; font-size: var(--small-size); color: #c4b5fd; text-decoration: none; border: 1px solid rgba(139,92,246,0.3); border-radius: 99px; padding: 0.2em 0.8em; background: rgba(139,92,246,0.06); transition: border-color 0.3s, color 0.3s; }
+.doc-link:hover { border-color: var(--accent-pink); color: #fff; }
+.doc-link svg { width: 1em; height: 1em; }
+.doc-group h3 { font-family: var(--font-display); font-size: var(--h3-size); font-weight: 800; margin-bottom: clamp(0.3rem, 0.7vw, 0.5rem); display: flex; align-items: center; gap: 0.4em; }
+.doc-group ul { list-style: none; display: flex; flex-direction: column; gap: clamp(0.2rem, 0.45vw, 0.35rem); }
+.doc-group li a { font-size: var(--small-size); color: var(--text-secondary); text-decoration: none; line-height: 1.45; }
+.doc-group li a:hover { color: #fff; }
+.doc-group li a b { color: #fff; font-weight: 600; }
+.doc-group li a code { font-size: 0.85em; color: #a78bfa; }
+
+
+/* ===========================================
+   SCREENSHOTS · placeholder (shown when an image is missing) · lightbox
+   =========================================== */
+.shot-grid { display: grid; gap: clamp(0.5rem, 1.2vw, 0.9rem); width: 100%; max-width: min(94vw, 1200px); margin: 0 auto; }
+.shot-grid.g3 { grid-template-columns: repeat(3, 1fr); }
+.shot-grid.g2 { grid-template-columns: repeat(2, 1fr); }
+@media (max-width: 900px) { .shot-grid.g3, .shot-grid.g2 { grid-template-columns: 1fr 1fr; } }
+.shot { position: relative; background: var(--code-bg); border: 1px solid var(--card-border); border-radius: clamp(8px, 1vw, 12px); overflow: hidden; display: flex; flex-direction: column; }
+.shot img { width: 100%; height: clamp(100px, 22vh, 250px); max-height: none; object-fit: cover; object-position: top left; cursor: zoom-in; display: block; }
+.shot.tall img { height: clamp(130px, 29vh, 340px); }
+.shot figcaption { font-size: var(--small-size); color: var(--text-secondary); padding: clamp(0.3rem, 0.6vw, 0.45rem) clamp(0.5rem, 0.9vw, 0.75rem); border-top: 1px solid rgba(139,92,246,0.15); line-height: 1.4; }
+.shot figcaption b { color: #fff; font-weight: 600; }
+.shot .ph { display: none; height: clamp(110px, 24vh, 260px); align-items: center; justify-content: center; flex-direction: column; gap: 0.3em; text-align: center; padding: 0.6rem; border: 1px dashed rgba(255,153,0,0.45); margin: 0.5rem; border-radius: 8px; color: var(--accent-orange); font-size: var(--small-size); }
+.shot .ph code { color: rgba(255,255,255,0.55); font-size: 0.85em; }
+.shot.missing img { display: none; }
+.shot.missing .ph { display: flex; }
+.lightbox { position: fixed; inset: 0; background: rgba(5,0,15,0.92); display: none; align-items: center; justify-content: center; z-index: 2000; cursor: zoom-out; }
+.lightbox.open { display: flex; }
+.lightbox img { max-width: 94vw; max-height: 90vh; border-radius: 10px; box-shadow: 0 0 60px rgba(139,92,246,0.35); }
+
+/* ===========================================
+   CHROME: PROGRESS BAR · NAV DOTS · FOOTER · PAGE NUMBER
+   =========================================== */
+.progress-bar { position: fixed; top: 0; left: 0; height: 3px; width: 0; background: linear-gradient(90deg, var(--accent-purple), var(--accent-pink), var(--accent-orange)); z-index: 1000; transition: width 0.3s; }
+.nav-dots { position: fixed; right: clamp(8px, 1.5vw, 20px); top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 8px; z-index: 1000; }
+.nav-dots button { width: 8px; height: 8px; border-radius: 50%; border: none; background: rgba(255,255,255,0.25); cursor: pointer; transition: all 0.3s; }
+.nav-dots button.active { background: var(--accent-pink); box-shadow: 0 0 10px var(--accent-pink); transform: scale(1.3); }
+.slide-footer { position: fixed; bottom: clamp(8px, 1.2vh, 16px); left: clamp(12px, 2vw, 24px); z-index: 999; font-size: clamp(0.6rem, 1vw, 0.8rem); letter-spacing: 0.02em; color: rgba(255,255,255,0.5); }
+.page-number { position: fixed; bottom: clamp(8px, 1.2vh, 16px); right: clamp(12px, 2vw, 24px); z-index: 999; font-family: var(--font-body); font-size: clamp(0.6rem, 0.9vw, 0.75rem); letter-spacing: 0.05em; color: rgba(255,255,255,0.35); font-variant-numeric: tabular-nums; }
+@media (max-height: 600px) { .slide-footer, .page-number { display: none; } }
+
+/* === REPO QR CARD (title + closing) === */
+.repo-card { display:flex; align-items:center; gap:clamp(0.6rem,1.2vw,1rem);
+    padding:clamp(0.5rem,0.9vw,0.8rem) clamp(0.7rem,1.2vw,1rem); border-radius:clamp(10px,1vw,14px);
+    background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.18); backdrop-filter:blur(6px);
+    text-decoration:none; color:inherit; width:max-content; max-width:100%; }
+.repo-card img { width:clamp(64px,8vw,120px); height:auto; background:#fff; padding:clamp(3px,0.4vw,6px); border-radius:8px; display:block; }
+.repo-card .repo-text { display:flex; flex-direction:column; gap:0.25em; text-align:left; }
+.repo-card .repo-label { font-size:var(--small-size); opacity:0.7; letter-spacing:0.08em; text-transform:uppercase; }
+.repo-card code { font-size:clamp(0.7rem,1vw,1rem); color:#fff; word-break:break-all; }
+.repo-card.corner { position:absolute; right:clamp(1rem,3vw,3rem); bottom:clamp(2.2rem,5vh,4rem); z-index:5; }
+@media (max-height:600px) { .repo-card img { width:clamp(48px,6vw,72px); } }
+</style>
+</head>
+<body>
+
+<div class="progress-bar" id="progressBar"></div>
+<nav class="nav-dots" id="navDots"></nav>
+<div class="slide-footer">&copy; 2026, Amazon Web Services, Inc. or its affiliates. All rights reserved.</div>
+<div class="page-number" id="pageNumber">1</div>
+<div class="lightbox" id="lightbox"><img alt=""></div>
+
+<!-- ============ 1. TITLE ============ -->
+<section class="slide title-slide">
+    <div class="blob-canvas">
+        <div class="blob" style="width:55vw;height:55vw;top:-10%;left:40%;animation:blob1 12s ease-in-out infinite;"></div>
+        <div class="blob" style="width:50vw;height:50vw;bottom:-5%;left:-10%;animation:blob2 15s ease-in-out infinite;"></div>
+        <div class="blob" style="width:40vw;height:40vw;top:20%;left:10%;animation:blob3 18s ease-in-out infinite;"></div>
+    </div>
+    <div class="slide-content">
+        <div class="title-label reveal d1">Amazon CloudWatch Omni · IDE extension + MCP</div>
+        <h1 class="title-main reveal d2">Improving Agents<br><em>with Evidence, in the IDE</em></h1>
+        <div class="title-accent reveal d3"></div>
+        <p class="title-sub reveal d4">Prod traces → local diagnosis → one layer → paired replay → staged gates → write-back<br>One real run · e-commerce support agent · Strands + AgentCore</p>
+        <p class="speaker-info reveal d5" id="speakerInfo"></p>
+    </div>
+    <a class="repo-card corner reveal d6" href="https://github.com/yagrxu/self-evolve-demo-with-omni" target="_blank" rel="noopener"><img src="assets/qr-github.svg" alt="GitHub QR"><span class="repo-text"><span class="repo-label">Demo · GitHub</span><code>github.com/yagrxu/self-evolve-demo-with-omni</code></span></a>
+</section>
+
+<!-- ============ 2. WHY IDE ============ -->
+<section class="slide">
+    <div class="floating-orb orb-blue" style="width:26vw;height:26vw;top:8%;left:64%;animation:orbFloat1 16s ease-in-out infinite;"></div>
+    <div class="slide-content" style="gap:clamp(0.4rem,1.2vw,1rem);">
+        <div class="section-label reveal d1 center">Why Omni</div>
+        <h2 class="section-title reveal d2 center">Iterate fast locally, <em>keep production evidence</em></h2>
+        <div class="shot-grid g2 reveal d3">
+            <figure class="shot tall"><img src="assets/omni-local-trace.png" alt="" loading="lazy" onerror="this.parentElement.classList.add('missing')"><div class="ph"><span>Screenshot pending</span><code>assets/omni-local-trace.png</code></div><figcaption><b>Local</b> · traces from the local dev server: agent / LLM / tool spans, replayable at once</figcaption></figure>
+            <figure class="shot tall"><img src="assets/omni-cloud-trace.png" alt="" loading="lazy" onerror="this.parentElement.classList.add('missing')"><div class="ph"><span>Screenshot pending</span><code>assets/omni-cloud-trace.png</code></div><figcaption><b>Cloud</b> · traces from deployed AgentCore agents: real identity, permissions, tool calls</figcaption></figure>
+        </div>
+        <div class="features-grid">
+            <div class="feature-card reveal d4"><div class="feat-icon"><i data-lucide="laptop"></i></div><h3>Inner loop is local</h3><p>Switching a prompt only restarts the dev server; no runtime deploy per candidate. A replay round takes minutes.</p></div>
+            <div class="feature-card reveal d5"><div class="feat-icon"><i data-lucide="cloud"></i></div><h3>Evidence comes from prod</h3><p>Failing samples are pulled from cloud traces and reproduced locally; production online eval is the ruler frozen before the run.</p></div>
+            <div class="feature-card reveal d6"><div class="feat-icon"><i data-lucide="bot"></i></div><h3>Coding agents call it</h3><p>Omni exposes its features as MCP tools; an agent in Kiro / Claude Code follows the skill step by step and stops for human review.</p></div>
+        </div>
+    </div>
+</section>
+
+<!-- ============ 3. SKILL / MCP / CLI ============ -->
+<section class="slide">
+    <div class="floating-orb orb-purple" style="width:24vw;height:24vw;bottom:8%;right:4%;animation:orbFloat2 15s ease-in-out infinite;"></div>
+    <div class="slide-content" style="gap:clamp(0.4rem,1.2vw,1rem);">
+        <div class="section-label reveal d1 center">How it is driven</div>
+        <h2 class="section-title reveal d2 center">Skill sets the steps, <em>MCP fetches evidence</em>, CLI does the math</h2>
+        <div class="code-grid side">
+            <figure class="shot reveal d3"><img src="assets/omni-skill-mcp-cli.gif" alt="" loading="lazy" style="height:clamp(160px,44vh,470px);" onerror="this.parentElement.classList.add('missing')"><div class="ph"><span>Screenshot pending</span><code>assets/omni-skill-mcp-cli.gif</code></div><figcaption><b>Real evidence pull</b> · read-only: 35 sessions, 419 spans written to the local run directory</figcaption></figure>
+            <div class="code-card reveal d4">
+                <div class="code-head"><span class="code-dots"><i></i><i></i><i></i></span><b>Division of labor</b></div>
+                <ul class="pit-list">
+                    <li><b>Skill</b> (<code>omni-self-evolution</code> v2): 11 steps, stop points, invariants, staged gates — tells the agent what to do and what not to do</li>
+                    <li><b>MCP</b> (Omni extension): trace queries, local dev server, test agent, evaluators, datasets</li>
+                    <li><b>CLI / scripts</b>: <code>scripts/omni.mjs</code> calls MCP; <code>se_*.py</code> split, diagnose, bootstrap, gate — <b>numbers come from scripts, not model estimates</b></li>
+                    <li><b>UI</b>: for observing and explaining; every conclusion lands as JSON in the run directory, auditable</li>
+                    <li>Run: <code>bash training/omni/scripts/run_step.sh &lt;n&gt;</code> — one step, then stop</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============ 4. PREFLIGHT ============ -->
+<section class="slide">
+    <div class="floating-orb orb-pink" style="width:22vw;height:22vw;top:10%;left:4%;animation:orbFloat3 17s ease-in-out infinite;"></div>
+    <div class="slide-content" style="gap:clamp(0.4rem,1.2vw,1rem);">
+        <div class="section-label reveal d1 center">Step 1 · Preflight</div>
+        <h2 class="section-title reveal d2 center">First, make sure <em>every result maps to a version</em></h2>
+        <div class="shot-grid g2 reveal d3">
+            <figure class="shot tall"><img src="assets/omni-login.png" alt="" loading="lazy" onerror="this.parentElement.classList.add('missing')"><div class="ph"><span>Screenshot pending</span><code>assets/omni-login.png</code></div><figcaption><b>Connections</b> · Omni Space (cloud traces / evals) + local AWS account (local test agent / evals)</figcaption></figure>
+            <figure class="shot tall"><img src="assets/omni-local-span-prompt-hash.png" alt="" loading="lazy" style="object-position:right bottom;" onerror="this.parentElement.classList.add('missing')"><div class="ph"><span>Screenshot pending</span><code>assets/omni-local-span-prompt-hash.png</code></div><figcaption><b>Version on the span</b> · local chat span: <code>llm.prompt_template.version = c1-add-concrete-amounts</code> · <code>hash = fe94609a…</code></figcaption></figure>
+        </div>
+        <div class="features-grid">
+            <div class="feature-card reveal d4"><div class="feat-icon"><i data-lucide="file-json"></i></div><h3>Prompts in prompts.json</h3><p>Managed by Omni Prompt Management; candidates switch via <code>OMNI_PROMPTS_OVERRIDE</code>, code untouched.</p></div>
+            <div class="feature-card reveal d5"><div class="feat-icon"><i data-lucide="radar"></i></div><h3>opentelemetry-instrument</h3><p>The local start command uses ADOT too; <code>prompt_loader.py</code> writes version and hash onto the span.</p></div>
+            <div class="feature-card reveal d6"><div class="feat-icon"><i data-lucide="key-round"></i></div><h3>Two real pitfalls</h3><p>Launch Kiro with <code>AWS_REGION</code> (the MCP proxy doesn't forward env vars); extension ≥ 1.1.0 needs <code>.omni/mcp-token</code> in the handshake.</p></div>
+        </div>
+    </div>
+</section>
+
+<!-- ============ 5. THE LOOP ============ -->
+<section class="slide process-slide">
+    <div class="floating-orb orb-purple" style="width:24vw;height:24vw;bottom:15%;right:5%;animation:orbFloat1 16s ease-in-out infinite;"></div>
+    <div class="slide-content" style="align-items:center;gap:var(--content-gap);">
+        <div class="section-label reveal d1 center">The Loop · 11 steps</div>
+        <h2 class="section-title reveal d2 center">11 stop points, <em>in six stages</em></h2>
+        <div class="process-row">
+            <div class="process-step reveal d2"><div class="step-num">1</div><div class="step-title">Preflight<br>Full snapshot</div><div class="step-desc">Versions traceable; fingerprint policy / tool / workflow / skill / prompt / model</div><span class="step-tag">Step 1–2</span></div>
+            <div class="process-step reveal d3"><div class="step-num">2</div><div class="step-title">Pull traces<br>Check prod evals</div><div class="step-desc">Read-only; check coverage, scales, gaps; freeze the local ruler</div><span class="step-tag">Step 3–4</span></div>
+            <div class="process-step reveal d4"><div class="step-num">3</div><div class="step-title">Split<br>Four groups</div><div class="step-desc">eligible → control / holdout / verify, a pure function</div><span class="step-tag">Step 5</span></div>
+            <div class="process-step reveal d5"><div class="step-num">4</div><div class="step-title">Repeat runs<br>Diagnose + A/A</div><div class="step-desc">Attribute by layer; measure noise, then <b>register</b> gates</div><span class="step-tag">Step 6 · 6b</span></div>
+            <div class="process-step reveal d6"><div class="step-num">5</div><div class="step-title">One layer<br>Paired replay</div><div class="step-desc">Candidates on the same set, order, environment; version checked per cell</div><span class="step-tag">Step 7–8</span></div>
+            <div class="process-step reveal d7"><div class="step-num">6</div><div class="step-title">Staged gates<br>Write back</div><div class="step-desc">S0 control → S1 holdout / verify → local only</div><span class="step-tag">Step 9–11</span></div>
+        </div>
+    </div>
+</section>
+
+<!-- ============ 6. SNAPSHOT + TRACES ============ -->
+<section class="slide">
+    <div class="floating-orb orb-blue" style="width:24vw;height:24vw;top:6%;right:6%;animation:orbFloat2 16s ease-in-out infinite;"></div>
+    <div class="slide-content" style="gap:clamp(0.4rem,1.2vw,1rem);">
+        <div class="section-label reveal d1 center">Step 2 – 3</div>
+        <h2 class="section-title reveal d2 center">The baseline is <em>a state</em>, not "only the prompt may change"</h2>
+        <div class="code-grid">
+            <div class="code-card reveal d3">
+                <div class="code-head"><span class="code-dots"><i></i><i></i><i></i></span><b>manifest.json · layers</b>&nbsp;omni_steps.py snapshot</div>
+<pre class="code"><span class="k">"layers"</span>: {
+  <span class="k">"policy"</span>:   {version:<span class="s">"policy-2026-09"</span>, sha256:<span class="s">"9969c5df…"</span>},
+  <span class="k">"tool"</span>:     {tier:<span class="s">"basic"</span>, active:[get_order, get_refund_policy,
+               search_knowledge_base, create_return_label]},
+  <span class="k">"workflow"</span>: {shape:<span class="s">"single Strands agent, free tool calls"</span>},
+  <span class="k">"skill"</span>:    {loaded:[]},
+  <span class="k">"prompt"</span>:   {version:<span class="s">"order_support-v1"</span>, hash:<span class="s">"c76023c4…"</span>,
+               system_prompt_chars:<span class="s">42</span>},
+  <span class="k">"model"</span>:    {modelId:<span class="s">"…claude-haiku-4-5…"</span>, temperature:<span class="s">0.3</span>}
+}
+<span class="c"># Which layer to change: decided after reading traces;
+# every other layer must stay byte-identical</span></pre>
+            </div>
+            <div class="code-card reveal d4">
+                <div class="code-head"><span class="code-dots"><i></i><i></i><i></i></span><b>Pull prod traces (read-only)</b>&nbsp;search_agent_traces</div>
+<pre class="code"><span class="c"># discover_agent_traces_metadata first, for real column names</span>
+<span class="k">SELECT</span> attributes['session.id'], traceId
+<span class="k">FROM</span> "default"
+<span class="k">WHERE</span> "@timestamp" <span class="k">BETWEEN</span> to_timestamp(<span class="s">start</span>)
+                     <span class="k">AND</span> to_timestamp(<span class="s">end</span>)
+  <span class="k">AND</span> attributes['gen_ai.agent.name']
+      = <span class="s">'Strands Agents'</span>
+<span class="k">GROUP BY</span> 1, 2
+<span class="c"># Result: 35 sessions · 419 spans → traces/raw.jsonl
+# Pitfall: flat column "attributes.session.id" is always empty
+# Pitfall: 0 rows → suspect the query first, not the traffic</span></pre>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============ 7. PRODUCTION EVAL CHECK ============ -->
+<section class="slide">
+    <div class="floating-orb orb-pink" style="width:24vw;height:24vw;top:8%;left:4%;animation:orbFloat1 16s ease-in-out infinite;"></div>
+    <div class="slide-content" style="gap:clamp(0.4rem,1.1vw,0.9rem);">
+        <div class="section-label reveal d1 center">Step 4 · Check production evals</div>
+        <h2 class="section-title reveal d2 center">The ruler is set before the run — <em>check the ruler first</em></h2>
+        <div class="stats-row reveal d3">
+            <div class="stat-item"><div class="stat-value">8</div><div class="stat-label">production evaluators</div></div>
+            <div class="stat-item"><div class="stat-value">35 / 35</div><div class="stat-label">sessions covered</div></div>
+            <div class="stat-item"><div class="stat-value">10 · 5</div><div class="stat-label">low Correctness · PolicyGrounding</div></div>
+            <div class="stat-item"><div class="stat-value">0</div><div class="stat-label">safety evaluators</div></div>
+        </div>
+        <div class="shot-grid g2 reveal d4">
+            <figure class="shot"><img src="assets/omni-online-eval-filter.gif" alt="" loading="lazy" onerror="this.parentElement.classList.add('missing')"><div class="ph"><span>Screenshot pending</span><code>assets/omni-online-eval-filter.gif</code></div><figcaption><b>Online eval results</b> · filter by evaluator / session / score to find low scores and coverage gaps</figcaption></figure>
+            <figure class="shot"><img src="assets/omni-evaluators.png" alt="" loading="lazy" onerror="this.parentElement.classList.add('missing')"><div class="ph"><span>Screenshot pending</span><code>assets/omni-evaluators.png</code></div><figcaption><b>Freeze 9 of 33 evaluators</b> · 5 of the 8 prod ones that run locally + 4 safety; <code>get_evaluator</code> reads real scales → evaluators.json</figcaption></figure>
+        </div>
+        <p class="section-desc reveal d5 center" style="font-size:var(--small-size);">Findings: the old config recorded Helpfulness as [0,6] (actually [0,1]), inverted Harmfulness, and had no safety gate; <code>ThirdParty.AutoEval.Security</code> systematically flags normal policy-citing replies → demoted to report_only.</p>
+    </div>
+</section>
+
+<!-- ============ 8. SPLIT ============ -->
+<section class="slide">
+    <div class="floating-orb orb-blue" style="width:24vw;height:24vw;top:6%;left:66%;animation:orbFloat3 17s ease-in-out infinite;"></div>
+    <div class="slide-content" style="gap:clamp(0.4rem,1.2vw,1rem);">
+        <div class="section-label reveal d1 center">Step 5 · Split</div>
+        <h2 class="section-title reveal d2 center">Four groups, <em>frozen before looking at failures</em></h2>
+        <div class="stats-row reveal d3">
+            <div class="stat-item"><div class="stat-value">35</div><div class="stat-label">eligible · usable prod samples</div></div>
+            <div class="stat-item"><div class="stat-value">28</div><div class="stat-label">control · diagnose &amp; design</div></div>
+            <div class="stat-item"><div class="stat-value">7</div><div class="stat-label">holdout · same dist., unseen</div></div>
+            <div class="stat-item"><div class="stat-value">20</div><div class="stat-label">verify · built apart, sealed</div></div>
+        </div>
+        <div class="code-grid side">
+            <figure class="shot reveal d4"><img src="assets/omni-split-json.png" alt="" loading="lazy" style="height:clamp(130px,32vh,360px);" onerror="this.parentElement.classList.add('missing')"><div class="ph"><span>Screenshot pending</span><code>assets/omni-split-json.png</code></div><figcaption><b>datasets/split.json</b> · function, member lists and sha256 all on disk</figcaption></figure>
+            <div class="code-card reveal d5">
+                <div class="code-head"><span class="code-dots"><i></i><i></i><i></i></span><b>Rules</b></div>
+                <ul class="pit-list">
+                    <li><b>Pure function</b>: lowest 30% of <code>blake2b(scenario_id)</code> → holdout; reruns give the same split — no "re-rolling until the candidate passes"</li>
+                    <li><b>control</b> may be read repeatedly; <b>holdout</b> is not read while designing; <b>verify</b> runs once</li>
+                    <li><b>This run's problem</b>: holdout had only 7 items — a single flip is −0.048, so fixed thresholds were mathematically unreachable</li>
+                    <li><b>Fix</b>: size sets up front by "ratio + minimum count"; if short, wait for traffic or add an independent set — never lower the bar</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============ 9. DIAGNOSIS ============ -->
+<section class="slide">
+    <div class="floating-orb orb-purple" style="width:24vw;height:24vw;bottom:6%;left:4%;animation:orbFloat2 16s ease-in-out infinite;"></div>
+    <div class="slide-content" style="gap:clamp(0.4rem,1.1vw,0.9rem);">
+        <div class="section-label reveal d1 center">Step 6 · Repeated sampling + layer diagnosis</div>
+        <h2 class="section-title reveal d2 center">Prod has 1 sample per scenario — <em>run 3× locally, then attribute</em></h2>
+        <div class="stats-row reveal d3">
+            <div class="stat-item"><div class="stat-value">84 / 84</div><div class="stat-label">valid cells, control 28 × 3</div></div>
+            <div class="stat-item"><div class="stat-value">14</div><div class="stat-label">Prompt (44%)</div></div>
+            <div class="stat-item"><div class="stat-value">12</div><div class="stat-label">Tool (38%)</div></div>
+            <div class="stat-item"><div class="stat-value">6</div><div class="stat-label">Workflow (19%)</div></div>
+        </div>
+        <div class="code-grid side">
+            <figure class="shot reveal d4"><img src="assets/omni-trace-by-id.gif" alt="" loading="lazy" style="height:clamp(130px,34vh,380px);" onerror="this.parentElement.classList.add('missing')"><div class="ph"><span>Screenshot pending</span><code>assets/omni-trace-by-id.gif</code></div><figcaption><b>Find by trace ID</b> · dev_014: only get_order → create_return_label, policy never checked</figcaption></figure>
+            <div class="code-card reveal d5">
+                <div class="code-head"><span class="code-dots"><i></i><i></i><i></i></span><b>Criterion: read the tool output in the trace</b></div>
+                <ul class="pit-list">
+                    <li><b>Data right, conclusion wrong</b> (hints a refund past the window, omits amounts) → <b>Prompt</b></li>
+                    <li><b>Model does the arithmetic and gets it wrong</b> (coupon split, depreciation, shipping) → <b>Tool</b></li>
+                    <li><b>Wrong order</b> (return label before checking policy) → <b>Workflow</b></li>
+                    <li>5 systematic failures (3/3) · 11 intermittent · 12 always pass</li>
+                    <li>Round 1 = Prompt: largest share, and measurable with all other layers byte-identical</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============ 10. NOISE + REGISTER ============ -->
+<section class="slide">
+    <div class="floating-orb orb-pink" style="width:24vw;height:24vw;top:8%;right:5%;animation:orbFloat1 16s ease-in-out infinite;"></div>
+    <div class="slide-content" style="gap:clamp(0.4rem,1.1vw,0.9rem);">
+        <div class="section-label reveal d1 center">Step 6b · A/A calibration + gate registration</div>
+        <h2 class="section-title reveal d2 center">Noise is bigger than you think — <em>measure, then set the bar</em></h2>
+        <div class="stats-row reveal d3">
+            <div class="stat-item"><div class="stat-value">+0.023 → +0.050</div><div class="stat-label">same outputs, judged once more</div></div>
+            <div class="stat-item"><div class="stat-value">969.10 / 989.10</div><div class="stat-label">dev_011: 3/3 wrong, then 3/3 right</div></div>
+            <div class="stat-item"><div class="stat-value">±0.045</div><div class="stat-label">A/A quality Δ, 95% CI half-width</div></div>
+        </div>
+        <div class="code-grid">
+            <div class="code-card reveal d4">
+                <div class="code-head"><span class="code-dots"><i></i><i></i><i></i></span><b>A/A</b>&nbsp;same prompt, two groups, 28 × 3</div>
+<pre class="code"><span class="k">quality Δ</span>  −0.020   <span class="c">95% CI [−0.068, +0.023]</span>
+<span class="k">latency</span>    +3.4%
+<span class="k">token</span>      −1.0%
+<span class="c"># Nothing changed, yet the CI already spans ±0.05
+# → "lower bound ≥ 0, Δ ≥ +0.03" is nearly
+#   unreachable at this sample size</span></pre>
+            </div>
+            <div class="code-card reveal d5">
+                <div class="code-head"><span class="code-dots"><i></i><i></i><i></i></span><b>Register</b>&nbsp;gates_register.py</div>
+<pre class="code"><span class="c"># bar = A/A noise + sample resolution + business budget</span>
+bash training/omni/scripts/run_step.sh <span class="s">6b</span>   <span class="c"># 2nd baseline</span>
+python3 training/omni/scripts/gates_register.py \
+  --run <span class="s">&lt;run_id&gt;</span> --stage <span class="s">S0</span>
+<span class="c"># A = the 3 diagnosis passes, B = independent runs-aa/
+# → gates.registered.S0.json (timestamp + reachability)
+# Refuses once candidate scores exist; later changes
+#   need a reason + calibrated_after_results</span></pre>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============ 11. CANDIDATES ============ -->
+<section class="slide">
+    <div class="floating-orb orb-blue" style="width:22vw;height:22vw;bottom:8%;right:6%;animation:orbFloat2 15s ease-in-out infinite;"></div>
+    <div class="slide-content" style="gap:var(--content-gap);">
+        <div class="section-label reveal d1 center">Step 7 · Change one layer</div>
+        <h2 class="section-title reveal d2 center">Three <em>Prompt-layer candidates</em></h2>
+        <div class="features-grid">
+            <div class="feature-card reveal d3"><div class="feat-icon"><i data-lucide="calculator"></i></div><h3>c1 · Concrete amounts</h3><p>Appended rule, 42 → 95 chars: when refundable, state each item's refund, whether original shipping is refunded, and the total (CNY).</p></div>
+            <div class="feature-card reveal d4"><div class="feat-icon"><i data-lucide="shield-x"></i></div><h3>c2 · No exceptions</h3><p>Appended rule, 42 → 89 chars: past the return window, offer only exchange or warranty; never hint at an exception.</p></div>
+            <div class="feature-card reveal d5"><div class="feat-icon"><i data-lucide="list-tree"></i></div><h3>c3 · Restructure</h3><p>Full rewrite, 42 → 126 chars: verdict first, then basis, amounts or alternatives. A control that covers both failure types.</p></div>
+        </div>
+        <div class="code-grid one">
+            <div class="code-card reveal d6">
+                <div class="code-head"><span class="code-dots"><i></i><i></i><i></i></span><b>Invariants (asserted by script, not by discipline)</b>&nbsp;omni_steps.py candidate</div>
+                <ul class="pit-list">
+                    <li>Each candidate is a complete, standalone <code>prompts.json</code>, <b>key-for-key identical to baseline except the prompt</b>; model / tool / policy / workflow / data fingerprints match the snapshot</li>
+                    <li>The prompt <b>must not contain</b> order IDs, expected answers, tool names or call order — no writing to the test, no crossing layers</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============ 12. PAIRED REPLAY ============ -->
+<section class="slide">
+    <div class="floating-orb orb-purple" style="width:24vw;height:24vw;top:6%;left:4%;animation:orbFloat3 17s ease-in-out infinite;"></div>
+    <div class="slide-content" style="gap:clamp(0.4rem,1.1vw,0.9rem);">
+        <div class="section-label reveal d1 center">Step 8 · Paired replay</div>
+        <h2 class="section-title reveal d2 center">Same set, order, environment — <em>version checked per cell</em></h2>
+        <div class="stats-row reveal d3">
+            <div class="stat-item"><div class="stat-value">4</div><div class="stat-label">arms: baseline + c1 / c2 / c3</div></div>
+            <div class="stat-item"><div class="stat-value">336 / 336</div><div class="stat-label">valid cells (28 × 3 × 4)</div></div>
+            <div class="stat-item"><div class="stat-value">0</div><div class="stat-label">version mislabels</div></div>
+        </div>
+        <div class="code-grid">
+            <div class="shot-grid g2 reveal d4">
+                <figure class="shot"><img src="assets/omni-replay-baseline-version.png" alt="" loading="lazy" onerror="this.parentElement.classList.add('missing')"><div class="ph"><span>Screenshot pending</span><code>assets/omni-replay-baseline-version.png</code></div><figcaption><b>baseline</b> · <code>order_support-v1</code></figcaption></figure>
+                <figure class="shot"><img src="assets/omni-replay-c3-version.png" alt="" loading="lazy" onerror="this.parentElement.classList.add('missing')"><div class="ph"><span>Screenshot pending</span><code>assets/omni-replay-c3-version.png</code></div><figcaption><b>candidate</b> · same spot reads <code>c3-restructure-grounded</code></figcaption></figure>
+            </div>
+            <div class="code-card reveal d5">
+                <div class="code-head"><span class="code-dots"><i></i><i></i><i></i></span><b>Per arm</b>&nbsp;MCP calls</div>
+<pre class="code"><span class="k">manage_test_agent</span> {action:<span class="s">"set_start_command"</span>,
+  command:<span class="s">"OMNI_PROMPTS_OVERRIDE=c1/prompts.json
+    opentelemetry-instrument python agent.py"</span>}
+<span class="k">local_server</span> {action:<span class="s">"start"</span>}
+<span class="k">manage_test_agent</span> {action:<span class="s">"invoke_agent"</span>, prompt}
+<span class="k">search_local_telemetry</span> {operation:<span class="s">"get"</span>, traceIds}
+<span class="c">#   version / hash mismatch → cell discarded</span>
+<span class="k">manage_evaluations</span> {action:<span class="s">"run"</span>, evaluatorId,
+  targets:[{input, output, expected}]}</pre>
+            </div>
+        </div>
+        <p class="section-desc reveal d6 center" style="font-size:var(--small-size);">The baseline is <b>re-run</b> here, not reused from diagnosis. Local SESSION-level evaluators see all calls as one collector session — a single observation — so they stay out of the gates.</p>
+    </div>
+</section>
+
+<!-- ============ 13. GATE RESULTS ============ -->
+<section class="slide">
+    <div class="floating-orb orb-pink" style="width:26vw;height:26vw;top:10%;left:60%;animation:orbFloat1 16s ease-in-out infinite;"></div>
+    <div class="slide-content" style="gap:var(--content-gap);">
+        <div class="section-label reveal d1 center">Step 9 – 10 · Staged gates</div>
+        <h2 class="section-title reveal d2 center">c1 made it to verify — <em>"better" is not yet proven</em></h2>
+        <div class="table-wrap reveal d3">
+            <table class="themed">
+                <tr><th>Stage · data</th><th>Quality Δ (95% CI)</th><th>Worst dim.</th><th>Token</th><th>New safety</th><th>Registered gate</th></tr>
+                <tr><td>S0 · control 28×3 (judge pass 1)</td><td>+0.023 (−0.034, +0.083)</td><td>−0.024</td><td>+13.8%</td><td>0</td><td class="bad">NO_CHANGE</td></tr>
+                <tr><td>S0 · control (re-judged, replaces)</td><td>+0.050 (−0.009, +0.111)</td><td>+0.012</td><td>+13.8%</td><td>0</td><td class="bad">NO_CHANGE</td></tr>
+                <tr><td>S1 · holdout 7×3 (re-run, replaces)</td><td>+0.008 (−0.035, +0.050)</td><td>−0.048</td><td>−3.5%</td><td>0</td><td class="bad">NO_CHANGE</td></tr>
+                <tr><td>S1 · verify 20 items (run once)</td><td>+0.035 (−0.045, +0.112)</td><td>−0.050</td><td>+30.2%</td><td>1 (false pos.)</td><td class="bad">NO_CHANGE</td></tr>
+            </table>
+        </div>
+        <div class="stats-row reveal d4">
+            <div class="stat-item"><div class="stat-value">19/39 → 29/39</div><div class="stat-label">verify: correct refund total stated</div></div>
+            <div class="stat-item"><div class="stat-value">+0.167</div><div class="stat-label">verify: Correctness</div></div>
+            <div class="stat-item"><div class="stat-value">+30% · +4.7%</div><div class="stat-label">token · latency</div></div>
+        </div>
+        <p class="section-desc reveal d5 center" style="font-size:var(--small-size);">Under the skill's registered gates all four were NO_CHANGE; the final outcome <code>WINNER_UNDER_CALIBRATED_GATES</code> rests on three human calibrations (next slide). "Actually better" is left to S2, a cloud canary with ≥200 real sessions.</p>
+    </div>
+</section>
+
+<!-- ============ 14. CALIBRATION LOG ============ -->
+<section class="slide">
+    <div class="floating-orb orb-blue" style="width:24vw;height:24vw;bottom:8%;left:4%;animation:orbFloat2 16s ease-in-out infinite;"></div>
+    <div class="slide-content" style="gap:var(--content-gap);">
+        <div class="section-label reveal d1 center">decision.json · human_decisions</div>
+        <h2 class="section-title reveal d2 center">Gates can be adjusted — <em>every change leaves a record</em></h2>
+        <div class="table-wrap reveal d3">
+            <table class="themed">
+                <tr><th>Time (UTC)</th><th>Type</th><th>Decision</th><th>After results?</th></tr>
+                <tr><td>10-20 00:25</td><td>Measurement</td><td>Re-judge all 336 control cells; pass 2 replaces pass 1 (both reported)</td><td class="ok">No</td></tr>
+                <tr><td>10-20 02:06</td><td>Calibration</td><td>CI lower bound ≥0 → ≥−0.01; token ≤10% → ≤15%</td><td class="warn">Yes</td></tr>
+                <tr><td>10-20 03:09</td><td>Measurement</td><td>Re-run holdout 7×3; pass 2 replaces pass 1</td><td class="ok">No</td></tr>
+                <tr><td>10-20 03:30</td><td>Calibration</td><td>Switch to non-inferiority: Δ ≥0, CI lower ≥−0.05, worst dim. ≥−0.05, token ≤15%</td><td class="warn">Yes</td></tr>
+                <tr><td>10-20 05:54</td><td>Calibration</td><td>Accept verify token +30.2% (business call) and 1 safety false positive (frs_013)</td><td class="warn">Yes</td></tr>
+            </table>
+        </div>
+        <p class="section-desc reveal d4 center" style="font-size:var(--small-size);">Lesson: fixed thresholds don't fit this sample size. Next round, thresholds are <b>computed from A/A and registered per stage</b> (S0 non-inferiority screen → S1 no worse on unseen items → S2 actually better → S3 full monitoring); more samples later, stricter gates.</p>
+    </div>
+</section>
+
+<!-- ============ 15. WRITEBACK ============ -->
+<section class="slide">
+    <div class="floating-orb orb-purple" style="width:24vw;height:24vw;top:8%;right:5%;animation:orbFloat1 16s ease-in-out infinite;"></div>
+    <div class="slide-content" style="gap:clamp(0.4rem,1.2vw,1rem);">
+        <div class="section-label reveal d1 center">Step 11 · Decide &amp; write back</div>
+        <h2 class="section-title reveal d2 center">Local only, <em>one-step rollback</em></h2>
+        <div class="code-grid side">
+            <figure class="shot reveal d3"><img src="assets/omni-prompt-management.png" alt="" loading="lazy" style="height:clamp(140px,36vh,400px);object-fit:contain;" onerror="this.parentElement.classList.add('missing')"><div class="ph"><span>Screenshot pending</span><code>assets/omni-prompt-management.png</code></div><figcaption><b>Prompt Management</b> · v2 = c1-add-concrete-amounts, with source run</figcaption></figure>
+            <div class="code-card reveal d4">
+                <div class="code-head"><span class="code-dots"><i></i><i></i><i></i></span><b>omni_steps.py decide</b></div>
+                <ul class="pit-list">
+                    <li><b>Tamper check</b>: candidate hash equals the replayed one; other layers match the snapshot</li>
+                    <li><b>Write back</b> <code>agent/prompts.json</code>: before/after sha256, backup and <code>writeback/REVERT.sh</code></li>
+                    <li><b>No deploy, no commit</b>: cloud v1 unchanged; release goes through CDK + S2 canary</li>
+                    <li><b>Next stage</b>: S2 with ≥200 real sessions, CI lower bound ≥0, zero new safety failures</li>
+                </ul>
+            </div>
+        </div>
+        <figure class="shot reveal d5" style="max-width:min(94vw,1200px);margin:0 auto;width:100%;"><img src="assets/omni-prompt-diff.png" alt="" loading="lazy" style="height:clamp(50px,11vh,120px);object-fit:contain;background:#111;" onerror="this.parentElement.classList.add('missing')"><div class="ph"><span>Screenshot pending</span><code>assets/omni-prompt-diff.png</code></div><figcaption><b>diff</b> · one added sentence: when refundable, state each item's refund, whether original shipping is refunded and how much, and the total (CNY)</figcaption></figure>
+    </div>
+</section>
+
+<!-- ============ 16. MCP CHEATSHEET ============ -->
+<section class="slide">
+    <div class="floating-orb orb-pink" style="width:22vw;height:22vw;bottom:8%;right:4%;animation:orbFloat3 17s ease-in-out infinite;"></div>
+    <div class="slide-content" style="gap:var(--content-gap);">
+        <div class="section-label reveal d1 center">Reference</div>
+        <h2 class="section-title reveal d2 center"><em>Omni MCP tools</em> used in this run</h2>
+        <div class="table-wrap reveal d3">
+            <table class="themed">
+                <tr><th>Tool</th><th>Steps</th><th>What it does</th><th>Field notes</th></tr>
+                <tr><td><code>check_credentials</code></td><td>1</td><td>Verify Omni Space and local AWS account</td><td>"Cloud is not configured" → Kiro launched without <code>AWS_REGION</code></td></tr>
+                <tr><td><code>discover_agent_traces_metadata</code> · <code>search_agent_traces</code></td><td>3</td><td>Cloud trace columns and SQL queries</td><td>Use <code>attributes['session.id']</code>; bind times as integer seconds</td></tr>
+                <tr><td><code>manage_test_agent</code> · <code>local_server</code></td><td>1 · 6 · 8</td><td>Set start command, start/stop dev server, invoke agent</td><td>Restart per arm; <code>OMNI_PROMPTS_OVERRIDE</code> points at the candidate</td></tr>
+                <tr><td><code>search_local_telemetry</code></td><td>1 · 8</td><td>Fetch local spans by trace ID</td><td>Check prompt version / hash per cell</td></tr>
+                <tr><td><code>manage_evaluations</code></td><td>4 · 6 · 8</td><td><code>get_evaluator</code> for scales; <code>run</code> + targets to score</td><td>Targets carry expected / assertions; SESSION level stays out of gates</td></tr>
+            </table>
+        </div>
+        <p class="section-desc reveal d4 center" style="font-size:var(--small-size);">Entry point: <code>node scripts/omni.mjs &lt;tool&gt; '&lt;json&gt;'</code> (reads <code>.omni/mcp-port</code> and <code>.omni/mcp-token</code>) · skill: <code>training/omni/skills/omni-self-evolution-v2/SKILL.md</code></p>
+    </div>
+</section>
+
+<!-- ============ 17. NEXT ROUND ============ -->
+<section class="slide">
+    <div class="floating-orb orb-blue" style="width:24vw;height:24vw;top:10%;left:62%;animation:orbFloat1 16s ease-in-out infinite;"></div>
+    <div class="slide-content" style="gap:var(--content-gap);">
+        <div class="section-label reveal d1 center">What we learned</div>
+        <h2 class="section-title reveal d2 center">Fixing one layer <em>often exposes the next</em></h2>
+        <div class="features-grid">
+            <div class="feature-card reveal d3"><div class="feat-icon"><i data-lucide="split"></i></div><h3>Cross-layer side effect</h3><p>c1's "state the amounts" surfaced the model's own arithmetic errors (coupon split, depreciation) to users — the 38% Tool-layer share was still there.</p></div>
+            <div class="feature-card reveal d4"><div class="feat-icon"><i data-lucide="wrench"></i></div><h3>Next round: Tool</h3><p>Same method, CloudWatch version: <code>AGENT_TOOL_TIER=enhanced</code> adds 3 deterministic tools; 40-item confirm set Δ +0.162, CI [+0.083, +0.243].</p></div>
+            <div class="feature-card reveal d5"><div class="feat-icon"><i data-lucide="notebook-pen"></i></div><h3>The skill evolves too</h3><p>This run left 18 skill revisions: full snapshot, A/A, pre-registration, staged gates, four data groups, measurement vs. calibration logged apart.</p></div>
+        </div>
+        <p class="section-desc reveal d6 center">One fixed case ≠ better overall ≠ ready to ship: diagnosis answers "where", replay answers "fixed?", gates answer "ship?" — each with its own evidence.</p>
+    </div>
+</section>
+
+<!-- ============ 18. CLOSING ============ -->
+<section class="slide title-slide">
+    <div class="blob-canvas">
+        <div class="blob" style="width:55vw;height:55vw;top:-10%;left:35%;animation:blob1 13s ease-in-out infinite;"></div>
+        <div class="blob" style="width:45vw;height:45vw;bottom:-10%;left:-8%;animation:blob3 17s ease-in-out infinite;"></div>
+    </div>
+    <div class="slide-content">
+        <div class="title-label reveal d1">Takeaways</div>
+        <h1 class="title-main reveal d2">Measure right,<br><em>then improve</em></h1>
+        <div class="title-accent reveal d3"></div>
+        <p class="title-sub reveal d4">Versions on spans · full-layer snapshot · check prod evals first · split as a pure function · repeated runs + A/A<br>Gates pre-registered and tightened by stage · one layer per round · write back locally, roll back anytime</p>
+        <p class="title-sub reveal d5" style="font-size:var(--small-size);opacity:0.75;">Materials: training/omni (workflow · skill · scripts) · .omni/self-evolution/&lt;run&gt; (all artifacts)</p>
+        <div class="reveal d6" style="display:flex;justify-content:center;margin-top:clamp(0.6rem,1.5vh,1.2rem);"><a class="repo-card" href="https://github.com/yagrxu/self-evolve-demo-with-omni" target="_blank" rel="noopener"><img src="assets/qr-github.svg" alt="GitHub QR"><span class="repo-text"><span class="repo-label">Demo · GitHub</span><code>github.com/yagrxu/self-evolve-demo-with-omni</code></span></a></div>
+    </div>
+</section>
+
+<script>
+/* ===========================================
+   SLIDE PRESENTATION CONTROLLER
+   Keyboard · wheel · touch · nav dots · progress · page number
+   =========================================== */
+class SlidePresentation {
+    constructor() {
+        this.slides = Array.from(document.querySelectorAll('.slide'));
+        this.current = 0;
+        this.locked = false;
+        this.dots = document.getElementById('navDots');
+        this.bar = document.getElementById('progressBar');
+        this.pageNum = document.getElementById('pageNumber');
+        this.setupNavDots();
+        this.setupObserver();
+        this.setupKeyboard();
+        this.setupWheel();
+        this.setupTouch();
+        this.update();
+    }
+    setupNavDots() {
+        this.slides.forEach((_, i) => {
+            const b = document.createElement('button');
+            b.setAttribute('aria-label', `Slide ${i + 1}`);
+            b.addEventListener('click', () => this.go(i));
+            this.dots.appendChild(b);
+        });
+    }
+    setupObserver() {
+        const io = new IntersectionObserver(entries => {
+            entries.forEach(e => {
+                if (e.isIntersecting) {
+                    e.target.classList.add('visible');
+                    this.current = this.slides.indexOf(e.target);
+                    this.update();
+                }
+            });
+        }, { threshold: 0.55 });
+        this.slides.forEach(s => io.observe(s));
+    }
+    setupKeyboard() {
+        document.addEventListener('keydown', e => {
+            if (['ArrowDown', 'ArrowRight', 'PageDown', ' '].includes(e.key)) { e.preventDefault(); this.go(this.current + 1); }
+            if (['ArrowUp', 'ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); this.go(this.current - 1); }
+            if (e.key === 'Home') this.go(0);
+            if (e.key === 'End') this.go(this.slides.length - 1);
+        });
+    }
+    setupWheel() {
+        window.addEventListener('wheel', e => {
+            e.preventDefault();
+            if (this.locked || Math.abs(e.deltaY) < 20) return;
+            this.go(this.current + (e.deltaY > 0 ? 1 : -1));
+        }, { passive: false });
+    }
+    setupTouch() {
+        let y0 = null;
+        window.addEventListener('touchstart', e => { y0 = e.touches[0].clientY; }, { passive: true });
+        window.addEventListener('touchend', e => {
+            if (y0 === null) return;
+            const dy = y0 - e.changedTouches[0].clientY;
+            if (Math.abs(dy) > 50) this.go(this.current + (dy > 0 ? 1 : -1));
+            y0 = null;
+        });
+    }
+    go(i) {
+        if (i < 0 || i >= this.slides.length) return;
+        this.locked = true;
+        this.slides[i].scrollIntoView({ behavior: 'smooth' });
+        this.current = i;
+        this.update();
+        setTimeout(() => { this.locked = false; }, 700);
+    }
+    update() {
+        Array.from(this.dots.children).forEach((d, i) => d.classList.toggle('active', i === this.current));
+        this.bar.style.width = `${((this.current + 1) / this.slides.length) * 100}%`;
+        if (this.pageNum) this.pageNum.textContent = `${this.current + 1} / ${this.slides.length}`;
+    }
+}
+
+/* Speaker info injection */
+if (typeof SPEAKER !== 'undefined') {
+    const el = document.getElementById('speakerInfo');
+    if (el) el.textContent = `${SPEAKER.name}, ${SPEAKER.company} ${SPEAKER.title}`;
+}
+new SlidePresentation();
+
+/* Image lightbox: click to enlarge, Esc / click to close */
+(() => {
+    const lb = document.getElementById('lightbox'), big = lb.querySelector('img');
+    document.querySelectorAll('.shot img').forEach(img => img.addEventListener('click', e => {
+        e.stopPropagation(); big.src = img.src; lb.classList.add('open');
+    }));
+    lb.addEventListener('click', () => lb.classList.remove('open'));
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') lb.classList.remove('open'); });
+})();
+if (typeof lucide !== 'undefined') lucide.createIcons();
+</script>
+</body>
+</html>

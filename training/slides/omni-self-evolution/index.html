@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>在 IDE 里有证据地改进 Agent —— CloudWatch Omni</title>
+
+<!-- Fonts: Urbanist（标题）· Albert Sans（正文）· Noto Sans SC（中文）· JetBrains Mono（代码） -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@500;700;800&family=Albert+Sans:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<!-- Icons: Lucide -->
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<!-- Speaker info（改 speaker.js 即可，不必动 HTML） -->
+<script src="speaker.js"></script>
+
+<style>
+/* ===========================================
+   CSS CUSTOM PROPERTIES (THEME) — re:Invent Keynote
+   =========================================== */
+:root {
+    --bg-primary: #0A0A0A;
+    --bg-gradient: linear-gradient(135deg, #1A0033 0%, #2D0066 40%, #7C3AED 100%);
+    --accent-purple: #8B5CF6;
+    --accent-pink: #D946EF;
+    --accent-orange: #FF9900;
+    --accent-blue: #3B82F6;
+    --accent-green: #34D399;
+    --text-primary: #FFFFFF;
+    --text-secondary: rgba(255, 255, 255, 0.62);
+    --glow-purple: rgba(139, 92, 246, 0.4);
+    --card-bg: rgba(139, 92, 246, 0.08);
+    --card-border: rgba(139, 92, 246, 0.25);
+    --code-bg: rgba(8, 4, 20, 0.85);
+
+    --font-display: 'Urbanist', 'Noto Sans SC', sans-serif;
+    --font-body: 'Albert Sans', 'Noto Sans SC', sans-serif;
+    --font-mono: 'JetBrains Mono', 'Noto Sans SC', monospace;
+
+    --subtitle-size: clamp(0.85rem, 1.8vw, 1.25rem);
+    --code-size: clamp(0.55rem, 0.95vw, 0.82rem);
+
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    --duration-normal: 0.7s;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* ===========================================
+   VIEWPORT FITTING: MANDATORY BASE STYLES (viewport-base.css, full)
+   =========================================== */
+html, body { height: 100%; overflow-x: hidden; scrollbar-width: none; }
+html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; }
+html { scroll-snap-type: y mandatory; scroll-behavior: smooth; }
+.slide {
+    width: 100vw; height: 100vh; height: 100dvh; overflow: hidden;
+    scroll-snap-align: start; display: flex; flex-direction: column; position: relative;
+}
+.slide-content {
+    flex: 1; display: flex; flex-direction: column; justify-content: center;
+    max-height: 100%; overflow: hidden; padding: var(--slide-padding);
+    position: relative; z-index: 1;
+}
+:root {
+    --title-size: clamp(1.5rem, 5vw, 4rem);
+    --h2-size: clamp(1.25rem, 3.2vw, 2.4rem);
+    --h3-size: clamp(0.95rem, 1.9vw, 1.4rem);
+    --body-size: clamp(0.75rem, 1.35vw, 1.06rem);
+    --small-size: clamp(0.62rem, 0.95vw, 0.85rem);
+    --slide-padding: clamp(1rem, 4vw, 4rem);
+    --content-gap: clamp(0.5rem, 2vw, 1.8rem);
+    --element-gap: clamp(0.25rem, 1vw, 1rem);
+}
+.card, .container, .content-box { max-width: min(90vw, 1000px); max-height: min(80vh, 700px); }
+.feature-list, .bullet-list { gap: clamp(0.4rem, 1vh, 1rem); }
+.feature-list li, .bullet-list li { font-size: var(--body-size); line-height: 1.4; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: clamp(0.5rem, 1.5vw, 1rem); }
+img, .image-container { max-width: 100%; max-height: min(50vh, 400px); object-fit: contain; }
+@media (max-height: 700px) {
+    :root { --slide-padding: clamp(0.75rem, 3vw, 2rem); --content-gap: clamp(0.4rem, 1.5vw, 1rem);
+            --title-size: clamp(1.25rem, 4.5vw, 2.5rem); --h2-size: clamp(1rem, 3vw, 1.75rem); }
+}
+@media (max-height: 600px) {
+    :root { --slide-padding: clamp(0.5rem, 2.5vw, 1.5rem); --content-gap: clamp(0.3rem, 1vw, 0.75rem);
+            --title-size: clamp(1.1rem, 4vw, 2rem); --body-size: clamp(0.7rem, 1.2vw, 0.95rem); }
+    .nav-dots, .keyboard-hint, .decorative { display: none; }
+}
+@media (max-height: 500px) {
+    :root { --slide-padding: clamp(0.4rem, 2vw, 1rem); --title-size: clamp(1rem, 3.5vw, 1.5rem);
+            --h2-size: clamp(0.9rem, 2.5vw, 1.25rem); --body-size: clamp(0.65rem, 1vw, 0.85rem); }
+}
+@media (max-width: 600px) { :root { --title-size: clamp(1.25rem, 7vw, 2.5rem); } .grid { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.2s !important; }
+    html { scroll-behavior: auto; }
+}
+
+/* ===========================================
+   BASE TYPOGRAPHY & BACKGROUND
+   =========================================== */
+body { background: var(--bg-primary); color: var(--text-primary); font-family: var(--font-body); -webkit-font-smoothing: antialiased; }
+code, .mono { font-family: var(--font-mono); }
+.hl-o { color: var(--accent-orange); }
+.hl-p { color: #c4b5fd; }
+.hl-g { color: var(--accent-green); }
+
+/* ===========================================
+   REVEAL ANIMATIONS
+   =========================================== */
+.reveal { opacity: 0; transform: translateY(25px); transition: opacity var(--duration-normal) var(--ease-out-expo), transform var(--duration-normal) var(--ease-out-expo); }
+.slide.visible .reveal { opacity: 1; transform: translateY(0); }
+.slide.visible .reveal.d1 { transition-delay: 0.1s; } .slide.visible .reveal.d2 { transition-delay: 0.2s; }
+.slide.visible .reveal.d3 { transition-delay: 0.3s; } .slide.visible .reveal.d4 { transition-delay: 0.4s; }
+.slide.visible .reveal.d5 { transition-delay: 0.5s; } .slide.visible .reveal.d6 { transition-delay: 0.6s; }
+.slide.visible .reveal.d7 { transition-delay: 0.7s; }
+
+/* ===========================================
+   FLOATING ORBS (content slides)
+   =========================================== */
+.floating-orb { position: absolute; border-radius: 50%; pointer-events: none; z-index: 0; filter: blur(20px); }
+.orb-purple { background: radial-gradient(circle, rgba(139,92,246,0.35) 0%, rgba(139,92,246,0) 70%); }
+.orb-pink { background: radial-gradient(circle, rgba(217,70,239,0.3) 0%, rgba(217,70,239,0) 70%); }
+.orb-blue { background: radial-gradient(circle, rgba(59,130,246,0.25) 0%, rgba(59,130,246,0) 70%); }
+@keyframes orbFloat1 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(20px,-30px) scale(1.05); } }
+@keyframes orbFloat2 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-25px,20px) scale(0.95); } }
+@keyframes orbFloat3 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(15px,25px) scale(1.03); } }
+
+/* ===========================================
+   SECTION LABEL / TITLE
+   =========================================== */
+.section-label { font-family: var(--font-body); font-size: var(--small-size); font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent-purple); margin-bottom: clamp(0.3rem, 0.7vw, 0.55rem); }
+.section-title { font-family: var(--font-display); font-size: var(--h2-size); font-weight: 800; line-height: 1.15; margin-bottom: clamp(0.3rem, 0.8vw, 0.7rem); }
+.section-title em { font-style: normal; background: linear-gradient(135deg, #a78bfa, #e879f9); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.section-desc { font-size: var(--body-size); color: var(--text-secondary); line-height: 1.65; }
+.center { text-align: center; }
+
+/* ===========================================
+   LAYOUT 1: TITLE / DIVIDER SLIDE (animated blobs)
+   =========================================== */
+.title-slide { background: #0B0015; }
+.title-slide::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 90% 90% at 50% 50%, transparent 40%, rgba(11,0,21,0.6) 100%); pointer-events: none; z-index: 0; }
+.title-slide .slide-content { align-items: center; text-align: center; gap: clamp(0.6rem, 1.5vw, 1.2rem); }
+.title-label { font-size: var(--small-size); font-weight: 500; letter-spacing: 0.35em; text-transform: uppercase; color: rgba(255,255,255,0.6); }
+.title-main { font-family: var(--font-display); font-size: var(--title-size); font-weight: 900; line-height: 1.12; letter-spacing: -0.01em; text-shadow: 0 0 30px rgba(139,92,246,0.3), 0 0 80px rgba(139,92,246,0.15); }
+.title-main em { font-style: normal; display: inline-block; background: linear-gradient(135deg, #a78bfa, #e879f9, #f472b6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; filter: drop-shadow(0 0 25px rgba(217,70,239,0.5)) drop-shadow(0 0 60px rgba(139,92,246,0.3)); }
+.title-accent { width: clamp(40px, 5vw, 56px); height: 3px; background: linear-gradient(90deg, var(--accent-orange), var(--accent-pink)); border-radius: 2px; box-shadow: 0 0 12px rgba(255,153,0,0.4), 0 0 30px rgba(217,70,239,0.2); }
+.title-sub { font-size: var(--subtitle-size); color: rgba(255,255,255,0.68); max-width: min(90vw, 720px); line-height: 1.6; }
+.speaker-info { font-size: var(--subtitle-size); color: rgba(255,255,255,0.7); margin-top: clamp(0.3rem, 0.6vw, 0.5rem); letter-spacing: 0.05em; }
+.blob-canvas { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+.blob { position: absolute; border-radius: 50%; filter: blur(80px); will-change: transform, opacity; }
+@keyframes blob1 { 0% { transform: translate(0,0) scale(1); background: rgba(139,92,246,0.55); } 25% { transform: translate(8vw,-12vh) scale(1.2); background: rgba(217,70,239,0.6); } 50% { transform: translate(-5vw,8vh) scale(0.9); background: rgba(59,130,246,0.5); } 75% { transform: translate(12vw,5vh) scale(1.15); background: rgba(236,72,153,0.55); } 100% { transform: translate(0,0) scale(1); background: rgba(139,92,246,0.55); } }
+@keyframes blob2 { 0% { transform: translate(0,0) scale(1); background: rgba(217,70,239,0.45); } 33% { transform: translate(-10vw,6vh) scale(1.15); background: rgba(139,92,246,0.5); } 66% { transform: translate(6vw,-8vh) scale(0.85); background: rgba(236,72,153,0.45); } 100% { transform: translate(0,0) scale(1); background: rgba(217,70,239,0.45); } }
+@keyframes blob3 { 0% { transform: translate(0,0) scale(1); background: rgba(59,80,200,0.4); } 50% { transform: translate(10vw,10vh) scale(1.2); background: rgba(139,92,246,0.45); } 100% { transform: translate(0,0) scale(1); background: rgba(59,80,200,0.4); } }
+@keyframes blob4 { 0% { transform: translate(0,0) scale(1); background: rgba(236,72,153,0.3); } 50% { transform: translate(-8vw,-6vh) scale(1.1); background: rgba(255,153,0,0.18); } 100% { transform: translate(0,0) scale(1); background: rgba(236,72,153,0.3); } }
+
+/* ===========================================
+   LAYOUT 2: CONTENT LAYOUT (left title + right pill cards)
+   =========================================== */
+.content-layout { display: grid; grid-template-columns: 2fr 3fr; gap: clamp(1.5rem, 4.5vw, 4rem); align-items: center; width: 100%; max-width: min(92vw, 1200px); margin: 0 auto; }
+@media (max-width: 768px) { .content-layout { grid-template-columns: 1fr; } }
+.pill-cards { display: flex; flex-direction: column; gap: clamp(0.35rem, 0.85vw, 0.6rem); }
+.pill-card { display: flex; align-items: center; gap: clamp(0.6rem, 1.2vw, 1rem); padding: clamp(0.55rem, 1.15vw, 0.85rem) clamp(0.8rem, 1.5vw, 1.2rem); background: var(--card-bg); border: 1px solid var(--card-border); border-radius: clamp(10px, 1.2vw, 14px); transition: border-color 0.3s, box-shadow 0.3s; }
+.pill-card:hover { border-color: rgba(139,92,246,0.45); box-shadow: 0 0 25px rgba(139,92,246,0.15); }
+.pill-icon { width: clamp(28px, 3vw, 36px); height: clamp(28px, 3vw, 36px); border-radius: clamp(6px, 0.8vw, 10px); flex-shrink: 0; background: linear-gradient(135deg, rgba(139,92,246,0.2), rgba(217,70,239,0.12)); display: flex; align-items: center; justify-content: center; }
+.pill-icon svg { width: 55%; height: 55%; stroke: var(--accent-purple); fill: none; stroke-width: 2; }
+.pill-text { font-size: var(--body-size); font-weight: 600; line-height: 1.35; }
+.pill-text span { color: var(--text-secondary); font-weight: 400; font-size: var(--small-size); display: block; margin-top: 0.15em; }
+
+/* ===========================================
+   LAYOUT 3: STATS ROW + FEATURE GRID
+   =========================================== */
+.stats-row { display: flex; width: 100%; max-width: min(92vw, 1000px); border: 1px solid var(--card-border); border-radius: clamp(10px, 1.2vw, 14px); background: var(--card-bg); overflow: hidden; margin: 0 auto; }
+.stat-item { flex: 1; text-align: center; padding: clamp(0.5rem, 1.3vw, 1.05rem) clamp(0.4rem, 1vw, 0.9rem); border-right: 1px solid rgba(139,92,246,0.15); }
+.stat-item:last-child { border-right: none; }
+.stat-value { font-family: var(--font-display); font-size: clamp(1.25rem, 3.2vw, 2.4rem); font-weight: 800; line-height: 1.1; background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.stat-label { font-size: var(--small-size); color: var(--text-secondary); letter-spacing: 0.04em; margin-top: 0.2em; }
+.features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(0.4rem, 1vw, 0.7rem); width: 100%; max-width: min(92vw, 1000px); margin: 0 auto; }
+@media (max-width: 768px) { .features-grid { grid-template-columns: 1fr; } }
+.feature-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: clamp(8px, 1vw, 12px); padding: clamp(0.6rem, 1.3vw, 1rem); transition: border-color 0.3s, box-shadow 0.3s; }
+.feature-card:hover { border-color: rgba(139,92,246,0.4); box-shadow: 0 0 25px rgba(139,92,246,0.12); }
+.feat-icon { width: clamp(24px, 2.6vw, 32px); height: clamp(24px, 2.6vw, 32px); border-radius: clamp(5px, 0.7vw, 8px); background: linear-gradient(135deg, rgba(139,92,246,0.18), rgba(217,70,239,0.1)); display: flex; align-items: center; justify-content: center; margin-bottom: clamp(0.25rem, 0.6vw, 0.45rem); color: var(--accent-purple); }
+.feat-icon svg { width: 60%; height: 60%; }
+.feature-card h3 { font-family: var(--font-display); font-size: var(--h3-size); font-weight: 800; margin-bottom: clamp(0.1rem, 0.3vw, 0.2rem); }
+.feature-card p { font-size: var(--small-size); color: var(--text-secondary); line-height: 1.5; }
+
+/* ===========================================
+   LAYOUT 5: PIPELINE COLUMNS
+   =========================================== */
+.pipeline-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: clamp(0.4rem, 1vw, 0.8rem); width: 100%; max-width: min(92vw, 1150px); margin: 0 auto; }
+.pipeline-col { text-align: center; background: rgba(255,255,255,0.02); border-radius: 10px; padding: clamp(0.4rem, 0.9vw, 0.7rem); }
+.pipeline-col-title { font-family: var(--font-display); font-size: var(--body-size); font-weight: 800; margin-bottom: clamp(0.3rem, 0.6vw, 0.5rem); line-height: 1.3; }
+.pipeline-bar { height: clamp(3px, 0.5vw, 5px); border-radius: 3px; margin-bottom: clamp(0.4rem, 0.8vw, 0.6rem); }
+.pipeline-items { display: flex; flex-direction: column; gap: clamp(0.25rem, 0.5vw, 0.4rem); }
+.pipeline-items span { font-size: var(--small-size); color: var(--text-secondary); line-height: 1.35; }
+.pipeline-footer { width: 100%; max-width: min(92vw, 1150px); margin: 0 auto; text-align: center; font-size: var(--small-size); color: var(--text-secondary); letter-spacing: 0.06em; padding-top: clamp(0.5rem, 1vw, 0.8rem); border-top: 1px solid rgba(255,255,255,0.1); }
+@media (max-width: 768px) { .pipeline-row { grid-template-columns: repeat(2, 1fr); } }
+
+/* ===========================================
+   LAYOUT 9: PROCESS FLOW (6 steps)
+   =========================================== */
+.process-row { display: flex; align-items: flex-start; width: 100%; max-width: min(94vw, 1200px); margin: 0 auto; position: relative; }
+.process-step { flex: 1; text-align: center; position: relative; padding: 0 clamp(0.25rem, 0.7vw, 0.55rem); }
+.step-num { width: clamp(34px, 4.2vw, 52px); height: clamp(34px, 4.2vw, 52px); border-radius: 50%; margin: 0 auto clamp(0.4rem, 0.8vw, 0.6rem); display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: var(--h3-size); font-weight: 800; background: linear-gradient(135deg, rgba(139,92,246,0.25), rgba(217,70,239,0.18)); border: 1px solid var(--card-border); position: relative; z-index: 1; box-shadow: 0 0 18px rgba(139,92,246,0.25); }
+.process-step:not(:last-child)::after { content: ''; position: absolute; top: clamp(17px, 2.1vw, 26px); left: calc(50% + clamp(20px, 2.5vw, 30px)); width: calc(100% - clamp(40px, 5vw, 60px)); height: 1px; background: linear-gradient(90deg, rgba(139,92,246,0.45), rgba(217,70,239,0.3)); z-index: 0; }
+.step-title { font-family: var(--font-display); font-size: var(--body-size); font-weight: 800; margin-bottom: clamp(0.15rem, 0.35vw, 0.3rem); line-height: 1.3; }
+.step-desc { font-size: var(--small-size); color: var(--text-secondary); line-height: 1.45; }
+.step-tag { display: inline-block; margin-top: clamp(0.25rem, 0.5vw, 0.4rem); font-size: clamp(0.55rem, 0.8vw, 0.72rem); color: var(--accent-orange); border: 1px solid rgba(255,153,0,0.35); border-radius: 99px; padding: 0.1em 0.6em; }
+@media (max-width: 768px) { .process-row { flex-direction: column; gap: 0.8rem; align-items: center; } .process-step { width: 100%; max-width: 320px; } .process-step:not(:last-child)::after { display: none; } }
+
+/* ===========================================
+   LAYOUT 8: COMPARISON SPLIT
+   =========================================== */
+.compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(0.8rem, 2vw, 1.5rem); width: 100%; max-width: min(92vw, 1100px); margin: 0 auto; }
+.compare-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: clamp(10px, 1.2vw, 16px); padding: clamp(0.9rem, 2vw, 1.6rem); }
+.compare-card-title { font-family: var(--font-display); font-size: var(--h3-size); font-weight: 800; margin-bottom: clamp(0.5rem, 1vw, 0.8rem); display: flex; align-items: center; gap: clamp(0.3rem, 0.6vw, 0.5rem); }
+.compare-dot { width: clamp(8px, 1vw, 12px); height: clamp(8px, 1vw, 12px); border-radius: 50%; flex-shrink: 0; }
+.compare-list { list-style: none; display: flex; flex-direction: column; gap: clamp(0.3rem, 0.7vw, 0.5rem); }
+.compare-list li { font-size: var(--small-size); color: var(--text-secondary); padding-left: clamp(0.8rem, 1.5vw, 1.2rem); position: relative; line-height: 1.5; }
+.compare-list li b { color: var(--text-primary); font-weight: 600; }
+.compare-list li::before { content: ''; position: absolute; left: 0; top: 0.55em; width: clamp(4px, 0.5vw, 6px); height: clamp(4px, 0.5vw, 6px); border-radius: 50%; background: var(--accent-purple); }
+@media (max-width: 768px) { .compare-grid { grid-template-columns: 1fr; } }
+
+/* ===========================================
+   THEMED TABLE
+   =========================================== */
+.table-wrap { width: 100%; max-width: min(94vw, 1150px); margin: 0 auto; border: 1px solid var(--card-border); border-radius: clamp(10px, 1.2vw, 14px); overflow: hidden; background: rgba(139,92,246,0.04); }
+table.themed { width: 100%; border-collapse: collapse; font-size: var(--small-size); }
+table.themed th { text-align: left; font-family: var(--font-display); font-weight: 800; letter-spacing: 0.03em; padding: clamp(0.35rem, 0.8vw, 0.6rem) clamp(0.5rem, 1vw, 0.9rem); background: linear-gradient(90deg, rgba(139,92,246,0.22), rgba(217,70,239,0.12)); color: #fff; }
+table.themed td { padding: clamp(0.3rem, 0.7vw, 0.52rem) clamp(0.5rem, 1vw, 0.9rem); border-top: 1px solid rgba(139,92,246,0.14); color: var(--text-secondary); line-height: 1.4; vertical-align: top; }
+table.themed td:first-child { color: var(--text-primary); font-weight: 600; white-space: nowrap; }
+table.themed code { font-size: 0.92em; color: #c4b5fd; }
+.ok { color: var(--accent-green) !important; font-weight: 700; }
+.bad { color: #fb7185 !important; font-weight: 700; }
+.warn { color: var(--accent-orange) !important; font-weight: 700; }
+
+/* ===========================================
+   CODE CARDS (custom for this deck)
+   =========================================== */
+.code-grid { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(0.6rem, 1.4vw, 1.1rem); width: 100%; max-width: min(94vw, 1200px); margin: 0 auto; }
+.code-grid.one { grid-template-columns: 1fr; }
+.code-grid.side { grid-template-columns: 3fr 2fr; }
+@media (max-width: 900px) { .code-grid, .code-grid.side { grid-template-columns: 1fr; } }
+.code-card { background: var(--code-bg); border: 1px solid var(--card-border); border-radius: clamp(10px, 1.1vw, 14px); overflow: hidden; box-shadow: 0 0 30px rgba(139,92,246,0.08); }
+.code-head { display: flex; align-items: center; gap: 0.5em; padding: clamp(0.3rem, 0.7vw, 0.5rem) clamp(0.6rem, 1.1vw, 0.9rem); border-bottom: 1px solid rgba(139,92,246,0.18); font-size: var(--small-size); color: var(--text-secondary); }
+.code-head b { color: #fff; font-family: var(--font-display); font-weight: 800; letter-spacing: 0.02em; }
+.code-dots { display: flex; gap: 4px; margin-right: 0.3em; }
+.code-dots i { width: 7px; height: 7px; border-radius: 50%; display: block; background: rgba(255,255,255,0.18); }
+.code-dots i:first-child { background: #fb7185; } .code-dots i:nth-child(2) { background: #fbbf24; } .code-dots i:nth-child(3) { background: #34d399; }
+pre.code { margin: 0; padding: clamp(0.5rem, 1vw, 0.85rem) clamp(0.6rem, 1.1vw, 0.95rem); font-family: var(--font-mono); font-size: var(--code-size); line-height: 1.55; color: #e9e3ff; white-space: pre; overflow: hidden; }
+pre.code .c { color: rgba(255,255,255,0.38); }     /* comment */
+pre.code .k { color: #f0abfc; }                    /* command / keyword */
+pre.code .s { color: #86efac; }                    /* string */
+pre.code .f { color: #fdba74; }                    /* flag */
+.pit-list { list-style: none; display: flex; flex-direction: column; gap: clamp(0.3rem, 0.7vw, 0.5rem); padding: clamp(0.5rem, 1vw, 0.85rem) clamp(0.7rem, 1.2vw, 1rem); }
+.pit-list li { font-size: var(--small-size); color: var(--text-secondary); line-height: 1.45; padding-left: 1.3em; position: relative; }
+.pit-list li::before { content: '!'; position: absolute; left: 0; top: 0; width: 1em; height: 1em; font-size: 0.8em; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(255,153,0,0.2); color: var(--accent-orange); font-weight: 800; margin-top: 0.15em; }
+.pit-list li b { color: #fff; font-weight: 600; }
+
+
+/* ===========================================
+   DOC LINKS (AWS 官方文档)
+   =========================================== */
+.doc-links { display: flex; flex-wrap: wrap; justify-content: center; gap: clamp(0.3rem, 0.7vw, 0.55rem); width: 100%; max-width: min(94vw, 1200px); margin: 0 auto; }
+.doc-link { display: inline-flex; align-items: center; gap: 0.4em; font-size: var(--small-size); color: #c4b5fd; text-decoration: none; border: 1px solid rgba(139,92,246,0.3); border-radius: 99px; padding: 0.2em 0.8em; background: rgba(139,92,246,0.06); transition: border-color 0.3s, color 0.3s; }
+.doc-link:hover { border-color: var(--accent-pink); color: #fff; }
+.doc-link svg { width: 1em; height: 1em; }
+.doc-group h3 { font-family: var(--font-display); font-size: var(--h3-size); font-weight: 800; margin-bottom: clamp(0.3rem, 0.7vw, 0.5rem); display: flex; align-items: center; gap: 0.4em; }
+.doc-group ul { list-style: none; display: flex; flex-direction: column; gap: clamp(0.2rem, 0.45vw, 0.35rem); }
+.doc-group li a { font-size: var(--small-size); color: var(--text-secondary); text-decoration: none; line-height: 1.45; }
+.doc-group li a:hover { color: #fff; }
+.doc-group li a b { color: #fff; font-weight: 600; }
+.doc-group li a code { font-size: 0.85em; color: #a78bfa; }
+
+
+/* ===========================================
+   SCREENSHOTS · placeholder（截图缺失时显示待补框）· lightbox
+   =========================================== */
+.shot-grid { display: grid; gap: clamp(0.5rem, 1.2vw, 0.9rem); width: 100%; max-width: min(94vw, 1200px); margin: 0 auto; }
+.shot-grid.g3 { grid-template-columns: repeat(3, 1fr); }
+.shot-grid.g2 { grid-template-columns: repeat(2, 1fr); }
+@media (max-width: 900px) { .shot-grid.g3, .shot-grid.g2 { grid-template-columns: 1fr 1fr; } }
+.shot { position: relative; background: var(--code-bg); border: 1px solid var(--card-border); border-radius: clamp(8px, 1vw, 12px); overflow: hidden; display: flex; flex-direction: column; }
+.shot img { width: 100%; height: clamp(100px, 22vh, 250px); max-height: none; object-fit: cover; object-position: top left; cursor: zoom-in; display: block; }
+.shot.tall img { height: clamp(130px, 29vh, 340px); }
+.shot figcaption { font-size: var(--small-size); color: var(--text-secondary); padding: clamp(0.3rem, 0.6vw, 0.45rem) clamp(0.5rem, 0.9vw, 0.75rem); border-top: 1px solid rgba(139,92,246,0.15); line-height: 1.4; }
+.shot figcaption b { color: #fff; font-weight: 600; }
+.shot .ph { display: none; height: clamp(110px, 24vh, 260px); align-items: center; justify-content: center; flex-direction: column; gap: 0.3em; text-align: center; padding: 0.6rem; border: 1px dashed rgba(255,153,0,0.45); margin: 0.5rem; border-radius: 8px; color: var(--accent-orange); font-size: var(--small-size); }
+.shot .ph code { color: rgba(255,255,255,0.55); font-size: 0.85em; }
+.shot.missing img { display: none; }
+.shot.missing .ph { display: flex; }
+.lightbox { position: fixed; inset: 0; background: rgba(5,0,15,0.92); display: none; align-items: center; justify-content: center; z-index: 2000; cursor: zoom-out; }
+.lightbox.open { display: flex; }
+.lightbox img { max-width: 94vw; max-height: 90vh; border-radius: 10px; box-shadow: 0 0 60px rgba(139,92,246,0.35); }
+
+/* ===========================================
+   CHROME: PROGRESS BAR · NAV DOTS · FOOTER · PAGE NUMBER
+   =========================================== */
+.progress-bar { position: fixed; top: 0; left: 0; height: 3px; width: 0; background: linear-gradient(90deg, var(--accent-purple), var(--accent-pink), var(--accent-orange)); z-index: 1000; transition: width 0.3s; }
+.nav-dots { position: fixed; right: clamp(8px, 1.5vw, 20px); top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 8px; z-index: 1000; }
+.nav-dots button { width: 8px; height: 8px; border-radius: 50%; border: none; background: rgba(255,255,255,0.25); cursor: pointer; transition: all 0.3s; }
+.nav-dots button.active { background: var(--accent-pink); box-shadow: 0 0 10px var(--accent-pink); transform: scale(1.3); }
+.slide-footer { position: fixed; bottom: clamp(8px, 1.2vh, 16px); left: clamp(12px, 2vw, 24px); z-index: 999; font-size: clamp(0.6rem, 1vw, 0.8rem); letter-spacing: 0.02em; color: rgba(255,255,255,0.5); }
+.page-number { position: fixed; bottom: clamp(8px, 1.2vh, 16px); right: clamp(12px, 2vw, 24px); z-index: 999; font-family: var(--font-body); font-size: clamp(0.6rem, 0.9vw, 0.75rem); letter-spacing: 0.05em; color: rgba(255,255,255,0.35); font-variant-numeric: tabular-nums; }
+@media (max-height: 600px) { .slide-footer, .page-number { display: none; } }
+
+/* === REPO QR CARD (title + closing) === */
+.repo-card { display:flex; align-items:center; gap:clamp(0.6rem,1.2vw,1rem);
+    padding:clamp(0.5rem,0.9vw,0.8rem) clamp(0.7rem,1.2vw,1rem); border-radius:clamp(10px,1vw,14px);
+    background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.18); backdrop-filter:blur(6px);
+    text-decoration:none; color:inherit; width:max-content; max-width:100%; }
+.repo-card img { width:clamp(64px,8vw,120px); height:auto; background:#fff; padding:clamp(3px,0.4vw,6px); border-radius:8px; display:block; }
+.repo-card .repo-text { display:flex; flex-direction:column; gap:0.25em; text-align:left; }
+.repo-card .repo-label { font-size:var(--small-size); opacity:0.7; letter-spacing:0.08em; text-transform:uppercase; }
+.repo-card code { font-size:clamp(0.7rem,1vw,1rem); color:#fff; word-break:break-all; }
+.repo-card.corner { position:absolute; right:clamp(1rem,3vw,3rem); bottom:clamp(2.2rem,5vh,4rem); z-index:5; }
+@media (max-height:600px) { .repo-card img { width:clamp(48px,6vw,72px); } }
+</style>
+</head>
+<body>
+
+<div class="progress-bar" id="progressBar"></div>
+<nav class="nav-dots" id="navDots"></nav>
+<div class="slide-footer">&copy; 2026, Amazon Web Services, Inc. or its affiliates. All rights reserved.</div>
+<div class="page-number" id="pageNumber">1</div>
+<div class="lightbox" id="lightbox"><img alt=""></div>
+
+<!-- ============ 1. TITLE ============ -->
+<section class="slide title-slide">
+    <div class="blob-canvas">
+        <div class="blob" style="width:55vw;height:55vw;top:-10%;left:40%;animation:blob1 12s ease-in-out infinite;"></div>
+        <div class="blob" style="width:50vw;height:50vw;bottom:-5%;left:-10%;animation:blob2 15s ease-in-out infinite;"></div>
+        <div class="blob" style="width:40vw;height:40vw;top:20%;left:10%;animation:blob3 18s ease-in-out infinite;"></div>
+    </div>
+    <div class="slide-content">
+        <div class="title-label reveal d1">Amazon CloudWatch Omni · IDE 扩展 + MCP</div>
+        <h1 class="title-main reveal d2">在 IDE 里<br><em>有证据地改进 Agent</em></h1>
+        <div class="title-accent reveal d3"></div>
+        <p class="title-sub reveal d4">一次真实的自演进：拉生产 trace → 本地复现与诊断 → 只改一层 → paired replay → 分阶段门禁 → 本地写回<br>run <code>strands_agents-20261019T125024Z</code> · 电商售后 agent · Strands + AgentCore</p>
+        <p class="speaker-info reveal d5" id="speakerInfo"></p>
+    </div>
+    <a class="repo-card corner reveal d6" href="https://github.com/yagrxu/self-evolve-demo-with-omni" target="_blank" rel="noopener"><img src="assets/qr-github.svg" alt="GitHub QR"><span class="repo-text"><span class="repo-label">Demo · GitHub</span><code>github.com/yagrxu/self-evolve-demo-with-omni</code></span></a>
+</section>
+
+<!-- ============ 2. WHY IDE ============ -->
+<section class="slide">
+    <div class="floating-orb orb-blue" style="width:26vw;height:26vw;top:8%;left:64%;animation:orbFloat1 16s ease-in-out infinite;"></div>
+    <div class="slide-content" style="gap:clamp(0.4rem,1.2vw,1rem);">
+        <div class="section-label reveal d1 center">Why Omni</div>
+        <h2 class="section-title reveal d2 center">本地快速迭代，<em>云端保留生产证据</em></h2>
+        <div class="shot-grid g2 reveal d3">
+            <figure class="shot tall"><img src="assets/omni-local-trace.png" alt="" loading="lazy" onerror="this.parentElement.classList.add('missing')"><div class="ph"><span>截图待补</span><code>assets/omni-local-trace.png</code></div><figcaption><b>Local</b> · 本地 dev server 的 trace：agent / LLM / tool 立即可回放</figcaption></figure>
+            <figure class="shot tall"><img src="assets/omni-cloud-trace.png" alt="" loading="lazy" onerror="this.parentElement.classList.add('missing')"><div class="ph"><span>截图待补</span><code>assets/omni-cloud-trace.png</code></div><figcaption><b>Cloud</b> · 已部署 AgentCore agent 的 trace：真实身份、权限、工具调用</figcaption></figure>
+        </div>
+        <div class="features-grid">
+            <div class="feature-card reveal d4"><div class="feat-icon"><i data-lucide="laptop"></i></div><h3>内环在本地</h3><p>换 prompt 只需重启 dev server，不用为每个候选部署一个 runtime。分钟级出一轮 replay。</p></div>
+            <div class="feature-card reveal d5"><div class="feat-icon"><i data-lucide="cloud"></i></div><h3>证据来自生产</h3><p>失败样本从云上 trace 拉回本地复现；生产在线评估就是 run 之前冻结的标尺。</p></div>
+            <div class="feature-card reveal d6"><div class="feat-icon"><i data-lucide="bot"></i></div><h3>coding agent 直接调用</h3><p>Omni 的能力以 MCP 工具暴露，Kiro / Claude Code 里的 agent 按 skill 一步步执行、每步停下给人确认。</p></div>
+        </div>
+    </div>
+</section>
+
+<!-- ============ 3. SKILL / MCP / CLI ============ -->
+<section class="slide">
+    <div class="floating-orb orb-purple" style="width:24vw;height:24vw;bottom:8%;right:4%;animation:orbFloat2 15s ease-in-out infinite;"></div>
+    <div class="slide-content" style="gap:clamp(0.4rem,1.2vw,1rem);">
+        <div class="section-label reveal d1 center">How it is driven</div>
+        <h2 class="section-title reveal d2 center">Skill 定步骤，<em>MCP 取证据</em>，CLI 做算术</h2>
+        <div class="code-grid side">
+            <figure class="shot reveal d3"><img src="assets/omni-skill-mcp-cli.gif" alt="" loading="lazy" style="height:clamp(160px,44vh,470px);" onerror="this.parentElement.classList.add('missing')"><div class="ph"><span>截图待补</span><code>assets/omni-skill-mcp-cli.gif</code></div><figcaption><b>真实取证</b> · 只读拉回 35 个 session、419 个 span，写入本地 run 目录</figcaption></figure>
+            <div class="code-card reveal d4">
+                <div class="code-head"><span class="code-dots"><i></i><i></i><i></i></span><b>三层分工</b></div>
+                <ul class="pit-list">
+                    <li><b>Skill</b>（<code>omni-self-evolution</code> v2）：11 个步骤、停点、不变量、分阶段门禁 —— 告诉 agent「做什么、不能做什么」</li>
+                    <li><b>MCP</b>（Omni 扩展）：trace 查询、本地 dev server、test agent、evaluator、dataset</li>
+                    <li><b>CLI / 脚本</b>：<code>scripts/omni.mjs</code> 调 MCP；<code>se_*.py</code> 做切分、诊断、bootstrap、门禁 —— <b>数字由脚本算，不由模型估</b></li>
+                    <li><b>界面</b>：用来观察和讲解；结论全部落在 run 目录的 JSON 里，可审计</li>
+                    <li>执行：<code>bash training/omni/scripts/run_step.sh &lt;n&gt;</code>，一次一步、跑完即停</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============ 4. PREFLIGHT ============ -->
+<section class="slide">
+    <div class="floating-orb orb-pink" style="width:22vw;height:22vw;top:10%;left:4%;animation:orbFloat3 17s ease-in-out infinite;"></div>
+    <div class="slide-content" style="gap:clamp(0.4rem,1.2vw,1rem);">
+        <div class="section-label reveal d1 center">Step 1 · Preflight</div>
+        <h2 class="section-title reveal d2 center">先确认：<em>每条结果都能归因到版本</em></h2>
+        <div class="shot-grid g2 reveal d3">
+            <figure class="shot tall"><img src="assets/omni-login.png" alt="" loading="lazy" onerror="this.parentElement.classList.add('missing')"><div class="ph"><span>截图待补</span><code>assets/omni-login.png</code></div><figcaption><b>连接</b> · Omni Space（云端 trace / 评估）+ 本机 AWS 账号（本地 test agent / 评估）</figcaption></figure>
+            <figure class="shot tall"><img src="assets/omni-local-span-prompt-hash.png" alt="" loading="lazy" style="object-position:right bottom;" onerror="this.parentElement.classList.add('missing')"><div class="ph"><span>截图待补</span><code>assets/omni-local-span-prompt-hash.png</code></div><figcaption><b>版本落在 span 上</b> · 本地 chat span：<code>llm.prompt_template.version = c1-add-concrete-amounts</code> · <code>hash = fe94609a…</code></figcaption></figure>
+        </div>
+        <div class="features-grid">
+            <div class="feature-card reveal d4"><div class="feat-icon"><i data-lucide="file-json"></i></div><h3>prompt 交给 prompts.json</h3><p>由 Omni Prompt Management 管理；候选用 <code>OMNI_PROMPTS_OVERRIDE</code> 切换，代码不动。</p></div>
+            <div class="feature-card reveal d5"><div class="feat-icon"><i data-lucide="radar"></i></div><h3>opentelemetry-instrument</h3><p>本地启动命令同样带 ADOT；<code>prompt_loader.py</code> 把版本与 hash 写进 span。</p></div>
+            <div class="feature-card reveal d6"><div class="feat-icon"><i data-lucide="key-round"></i></div><h3>两个实测坑</h3><p>Kiro 要带 <code>AWS_REGION</code> 启动（MCP proxy 不转发环境变量）；扩展 ≥ 1.1.0 握手需要 <code>.omni/mcp-token</code>。</p></div>
+        </div>
+    </div>
+</section>
+
+<!-- ============ 5. THE LOOP ============ -->
+<section class="slide process-slide">
+    <div class="floating-orb orb-purple" style="width:24vw;height:24vw;bottom:15%;right:5%;animation:orbFloat1 16s ease-in-out infinite;"></div>
+    <div class="slide-content" style="align-items:center;gap:var(--content-gap);">
+        <div class="section-label reveal d1 center">The Loop · 11 steps</div>
+        <h2 class="section-title reveal d2 center">11 个停点，<em>归成六段</em></h2>
+        <div class="process-row">
+            <div class="process-step reveal d2"><div class="step-num">1</div><div class="step-title">Preflight<br>全层快照</div><div class="step-desc">版本可归因；记录 policy / tool / workflow / skill / prompt / model 指纹</div><span class="step-tag">Step 1–2</span></div>
+            <div class="process-step reveal d3"><div class="step-num">2</div><div class="step-title">拉生产 trace<br>查生产评估</div><div class="step-desc">只读；检查覆盖、值域、缺口，冻结本地标尺</div><span class="step-tag">Step 3–4</span></div>
+            <div class="process-step reveal d4"><div class="step-num">3</div><div class="step-title">切分<br>四组数据</div><div class="step-desc">eligible → control / holdout / verify，纯函数</div><span class="step-tag">Step 5</span></div>
+            <div class="process-step reveal d5"><div class="step-num">4</div><div class="step-title">重复采样<br>诊断 + A/A</div><div class="step-desc">按层归因；测噪声后<b>先登记</b>门禁</div><span class="step-tag">Step 6 · 6b</span></div>
+            <div class="process-step reveal d6"><div class="step-num">5</div><div class="step-title">只改一层<br>paired replay</div><div class="step-desc">候选 + 同题同序同环境，逐格核对版本</div><span class="step-tag">Step 7–8</span></div>
+            <div class="process-step reveal d7"><div class="step-num">6</div><div class="step-title">分阶段门禁<br>写回</div><div class="step-desc">S0 control → S1 holdout / verify → 只写本地</div><span class="step-tag">Step 9–11</span></div>
+        </div>
+    </div>
+</section>
+
+<!-- ============ 6. SNAPSHOT + TRACES ============ -->
+<section class="slide">
+    <div class="floating-orb orb-blue" style="width:24vw;height:24vw;top:6%;right:6%;animation:orbFloat2 16s ease-in-out infinite;"></div>
+    <div class="slide-content" style="gap:clamp(0.4rem,1.2vw,1rem);">
+        <div class="section-label reveal d1 center">Step 2 – 3</div>
+        <h2 class="section-title reveal d2 center">基线是<em>一个状态</em>，不是「锁定只改 prompt」</h2>
+        <div class="code-grid">
+            <div class="code-card reveal d3">
+                <div class="code-head"><span class="code-dots"><i></i><i></i><i></i></span><b>manifest.json · layers</b>&nbsp;omni_steps.py snapshot</div>
+<pre class="code"><span class="k">"layers"</span>: {
+  <span class="k">"policy"</span>:   {version:<span class="s">"policy-2026-09"</span>, sha256:<span class="s">"9969c5df…"</span>},
+  <span class="k">"tool"</span>:     {tier:<span class="s">"basic"</span>, active:[get_order, get_refund_policy,
+               search_knowledge_base, create_return_label]},
+  <span class="k">"workflow"</span>: {shape:<span class="s">"单 Strands Agent 自由调用工具"</span>},
+  <span class="k">"skill"</span>:    {loaded:[]},
+  <span class="k">"prompt"</span>:   {version:<span class="s">"order_support-v1"</span>, hash:<span class="s">"c76023c4…"</span>,
+               system_prompt_chars:<span class="s">42</span>},
+  <span class="k">"model"</span>:    {modelId:<span class="s">"…claude-haiku-4-5…"</span>, temperature:<span class="s">0.3</span>}
+}
+<span class="c"># 改哪层：看完 trace 再定；其余层必须字节一致</span></pre>
+            </div>
+            <div class="code-card reveal d4">
+                <div class="code-head"><span class="code-dots"><i></i><i></i><i></i></span><b>拉生产 trace（只读）</b>&nbsp;search_agent_traces</div>
+<pre class="code"><span class="c"># 先 discover_agent_traces_metadata 拿真实列名</span>
+<span class="k">SELECT</span> attributes['session.id'], traceId
+<span class="k">FROM</span> "default"
+<span class="k">WHERE</span> "@timestamp" <span class="k">BETWEEN</span> to_timestamp(<span class="s">start</span>)
+                     <span class="k">AND</span> to_timestamp(<span class="s">end</span>)
+  <span class="k">AND</span> attributes['gen_ai.agent.name']
+      = <span class="s">'Strands Agents'</span>
+<span class="k">GROUP BY</span> 1, 2
+<span class="c"># 结果：35 个 session · 419 个 span → traces/raw.jsonl
+# 坑：扁平列 "attributes.session.id" 恒为空，要用 map 访问
+# 坑：0 行先当查询写错，不当没流量</span></pre>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============ 7. PRODUCTION EVAL CHECK ============ -->
+<section class="slide">
+    <div class="floating-orb orb-pink" style="width:24vw;height:24vw;top:8%;left:4%;animation:orbFloat1 16s ease-in-out infinite;"></div>
+    <div class="slide-content" style="gap:clamp(0.4rem,1.1vw,0.9rem);">
+        <div class="section-label reveal d1 center">Step 4 · 检查生产评估</div>
+        <h2 class="section-title reveal d2 center">尺子在 run 之前就定了，<em>先给尺子体检</em></h2>
+        <div class="stats-row reveal d3">
+            <div class="stat-item"><div class="stat-value">8</div><div class="stat-label">生产 evaluator</div></div>
+            <div class="stat-item"><div class="stat-value">35 / 35</div><div class="stat-label">session 覆盖</div></div>
+            <div class="stat-item"><div class="stat-value">10 · 5</div><div class="stat-label">Correctness · PolicyGrounding 低分</div></div>
+            <div class="stat-item"><div class="stat-value">0</div><div class="stat-label">安全类 evaluator</div></div>
+        </div>
+        <div class="shot-grid g2 reveal d4">
+            <figure class="shot"><img src="assets/omni-online-eval-filter.gif" alt="" loading="lazy" onerror="this.parentElement.classList.add('missing')"><div class="ph"><span>截图待补</span><code>assets/omni-online-eval-filter.gif</code></div><figcaption><b>在线评估结果</b> · 按 evaluator / session / 分数过滤，定位低分与覆盖缺口</figcaption></figure>
+            <figure class="shot"><img src="assets/omni-evaluators.png" alt="" loading="lazy" onerror="this.parentElement.classList.add('missing')"><div class="ph"><span>截图待补</span><code>assets/omni-evaluators.png</code></div><figcaption><b>从 33 个 evaluator 里选 9 个冻结</b> · 生产 8 个中本地能跑的 5 个 + 补 4 个 safety；<code>get_evaluator</code> 读真实值域 → evaluators.json</figcaption></figure>
+        </div>
+        <p class="section-desc reveal d5 center" style="font-size:var(--small-size);">体检发现：旧配置把 Helpfulness 值域记成 [0,6]（实为 [0,1]）、Harmfulness 方向记反、门禁里没有 safety；<code>ThirdParty.AutoEval.Security</code> 对引用政策的正常回复系统性误报 → 降为 report_only。</p>
+    </div>
+</section>
+
+<!-- ============ 8. SPLIT ============ -->
+<section class="slide">
+    <div class="floating-orb orb-blue" style="width:24vw;height:24vw;top:6%;left:66%;animation:orbFloat3 17s ease-in-out infinite;"></div>
+    <div class="slide-content" style="gap:clamp(0.4rem,1.2vw,1rem);">
+        <div class="section-label reveal d1 center">Step 5 · 切分</div>
+        <h2 class="section-title reveal d2 center">四组数据，<em>在看失败细节之前冻结</em></h2>
+        <div class="stats-row reveal d3">
+            <div class="stat-item"><div class="stat-value">35</div><div class="stat-label">eligible · 合格生产样本</div></div>
+            <div class="stat-item"><div class="stat-value">28</div><div class="stat-label">control · 诊断与候选</div></div>
+            <div class="stat-item"><div class="stat-value">7</div><div class="stat-label">holdout · 同分布未见</div></div>
+            <div class="stat-item"><div class="stat-value">20</div><div class="stat-label">verify · 独立构建、封存</div></div>
+        </div>
+        <div class="code-grid side">
+            <figure class="shot reveal d4"><img src="assets/omni-split-json.png" alt="" loading="lazy" style="height:clamp(130px,32vh,360px);" onerror="this.parentElement.classList.add('missing')"><div class="ph"><span>截图待补</span><code>assets/omni-split-json.png</code></div><figcaption><b>datasets/split.json</b> · 函数、名单、sha256 全部落盘</figcaption></figure>
+            <div class="code-card reveal d5">
+                <div class="code-head"><span class="code-dots"><i></i><i></i><i></i></span><b>规则</b></div>
+                <ul class="pit-list">
+                    <li><b>纯函数</b>：<code>blake2b(scenario_id)</code> 最低 30% 进 holdout，重跑结果相同 —— 不能「重摇到候选通过」</li>
+                    <li><b>control</b> 可以反复看；<b>holdout</b> 设计候选时不看；<b>verify</b> 只跑一次</li>
+                    <li><b>本次的问题</b>：holdout 只有 7 条，单格翻转就是 −0.048 —— 固定门槛在数学上不可达</li>
+                    <li><b>解法</b>：样本量按「比例 + 最少条数」事先算；不够就等流量或补独立集，不降门槛</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============ 9. DIAGNOSIS ============ -->
+<section class="slide">
+    <div class="floating-orb orb-purple" style="width:24vw;height:24vw;bottom:6%;left:4%;animation:orbFloat2 16s ease-in-out infinite;"></div>
+    <div class="slide-content" style="gap:clamp(0.4rem,1.1vw,0.9rem);">
+        <div class="section-label reveal d1 center">Step 6 · 重复采样 + 按层诊断</div>
+        <h2 class="section-title reveal d2 center">生产每题只有 1 个样本，<em>本地跑 3 遍再归因</em></h2>
+        <div class="stats-row reveal d3">
+            <div class="stat-item"><div class="stat-value">84 / 84</div><div class="stat-label">control 28 × 3 有效格</div></div>
+            <div class="stat-item"><div class="stat-value">14</div><div class="stat-label">Prompt（44%）</div></div>
+            <div class="stat-item"><div class="stat-value">12</div><div class="stat-label">Tool（38%）</div></div>
+            <div class="stat-item"><div class="stat-value">6</div><div class="stat-label">Workflow（19%）</div></div>
+        </div>
+        <div class="code-grid side">
+            <figure class="shot reveal d4"><img src="assets/omni-trace-by-id.gif" alt="" loading="lazy" style="height:clamp(130px,34vh,380px);" onerror="this.parentElement.classList.add('missing')"><div class="ph"><span>截图待补</span><code>assets/omni-trace-by-id.gif</code></div><figcaption><b>按 trace ID 定位</b> · dev_014：只有 get_order → create_return_label，没查政策</figcaption></figure>
+            <div class="code-card reveal d5">
+                <div class="code-head"><span class="code-dots"><i></i><i></i><i></i></span><b>判据：读 trace 里的工具返回</b></div>
+                <ul class="pit-list">
+                    <li><b>数据对、结论错</b>（超窗口仍暗示可退、不写金额）→ <b>Prompt</b></li>
+                    <li><b>模型自己心算出错</b>（券分摊、折旧费、运费）→ <b>Tool</b></li>
+                    <li><b>顺序错</b>（先开退货单再查政策）→ <b>Workflow</b></li>
+                    <li>5 个系统性失败（3/3）· 11 个间歇 · 12 个全过</li>
+                    <li>第 1 轮选 Prompt：占比最高，且能保持其余层字节不变单独测量</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============ 10. NOISE + REGISTER ============ -->
+<section class="slide">
+    <div class="floating-orb orb-pink" style="width:24vw;height:24vw;top:8%;right:5%;animation:orbFloat1 16s ease-in-out infinite;"></div>
+    <div class="slide-content" style="gap:clamp(0.4rem,1.1vw,0.9rem);">
+        <div class="section-label reveal d1 center">Step 6b · A/A 校准 + 登记门禁</div>
+        <h2 class="section-title reveal d2 center">噪声比想象的大，<em>门槛要先测再定</em></h2>
+        <div class="stats-row reveal d3">
+            <div class="stat-item"><div class="stat-value">+0.023 → +0.050</div><div class="stat-label">同一批输出，判官重评一次</div></div>
+            <div class="stat-item"><div class="stat-value">969.10 / 989.10</div><div class="stat-label">dev_011：两个时段各 3/3 错、3/3 对</div></div>
+            <div class="stat-item"><div class="stat-value">±0.045</div><div class="stat-label">A/A 质量 Δ 的 95% CI 半宽</div></div>
+        </div>
+        <div class="code-grid">
+            <div class="code-card reveal d4">
+                <div class="code-head"><span class="code-dots"><i></i><i></i><i></i></span><b>A/A</b>&nbsp;同一个 prompt 两组，28 × 3</div>
+<pre class="code"><span class="k">quality Δ</span>  −0.020   <span class="c">95% CI [−0.068, +0.023]</span>
+<span class="k">latency</span>    +3.4%
+<span class="k">token</span>      −1.0%
+<span class="c"># 什么都没改，CI 已经跨过 ±0.05
+# → 「下界 ≥ 0、Δ ≥ +0.03」在这个样本量下几乎不可达</span></pre>
+            </div>
+            <div class="code-card reveal d5">
+                <div class="code-head"><span class="code-dots"><i></i><i></i><i></i></span><b>登记</b>&nbsp;gates_register.py</div>
+<pre class="code"><span class="c"># 门槛 = A/A 噪声 + 样本量分辨率 + 业务预算</span>
+bash training/omni/scripts/run_step.sh <span class="s">6b</span>   <span class="c"># 第二组 baseline</span>
+python3 training/omni/scripts/gates_register.py \
+  --run <span class="s">&lt;run_id&gt;</span> --stage <span class="s">S0</span>
+<span class="c"># A = 诊断的 3 遍，B = runs-aa/ 独立重跑
+# → gates.registered.S0.json（时间戳 + 可达性警告）
+# 已有候选分数时拒绝登记；看到结果后再改 →
+#   记录理由，标记 calibrated_after_results</span></pre>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============ 11. CANDIDATES ============ -->
+<section class="slide">
+    <div class="floating-orb orb-blue" style="width:22vw;height:22vw;bottom:8%;right:6%;animation:orbFloat2 15s ease-in-out infinite;"></div>
+    <div class="slide-content" style="gap:var(--content-gap);">
+        <div class="section-label reveal d1 center">Step 7 · 只改一层</div>
+        <h2 class="section-title reveal d2 center">Prompt 层的<em>三个候选</em></h2>
+        <div class="features-grid">
+            <div class="feature-card reveal d3"><div class="feat-icon"><i data-lucide="calculator"></i></div><h3>c1 · 补全具体金额</h3><p>追加约束，42 → 95 字：可以退款时写出每件可退金额、原始运费是否退还及金额、退款合计（元）。</p></div>
+            <div class="feature-card reveal d4"><div class="feat-icon"><i data-lucide="shield-x"></i></div><h3>c2 · 禁止承诺例外</h3><p>追加约束，42 → 89 字：超出退货窗口时只提供换新或保修路径，不暗示例外。</p></div>
+            <div class="feature-card reveal d5"><div class="feat-icon"><i data-lucide="list-tree"></i></div><h3>c3 · 重构回答结构</h3><p>整段重写，42 → 126 字：先给结论，再给依据、金额或替代路径。作为覆盖两类问题的对照。</p></div>
+        </div>
+        <div class="code-grid one">
+            <div class="code-card reveal d6">
+                <div class="code-head"><span class="code-dots"><i></i><i></i><i></i></span><b>不变量（脚本断言，不靠自觉）</b>&nbsp;omni_steps.py candidate</div>
+                <ul class="pit-list">
+                    <li>每个候选是完整独立的 <code>prompts.json</code>；与基线<b>除 prompt 外逐键一致</b>，model / tool / policy / workflow / 数据的指纹与快照相同</li>
+                    <li>prompt 里<b>不得出现</b>订单号、标准答案、工具名或调用顺序 —— 防止对着题目写答案、防止越层</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============ 12. PAIRED REPLAY ============ -->
+<section class="slide">
+    <div class="floating-orb orb-purple" style="width:24vw;height:24vw;top:6%;left:4%;animation:orbFloat3 17s ease-in-out infinite;"></div>
+    <div class="slide-content" style="gap:clamp(0.4rem,1.1vw,0.9rem);">
+        <div class="section-label reveal d1 center">Step 8 · paired replay</div>
+        <h2 class="section-title reveal d2 center">同题、同序、同环境，<em>逐格核对版本</em></h2>
+        <div class="stats-row reveal d3">
+            <div class="stat-item"><div class="stat-value">4</div><div class="stat-label">arm：baseline + c1 / c2 / c3</div></div>
+            <div class="stat-item"><div class="stat-value">336 / 336</div><div class="stat-label">有效格（28 × 3 × 4）</div></div>
+            <div class="stat-item"><div class="stat-value">0</div><div class="stat-label">版本错标</div></div>
+        </div>
+        <div class="code-grid">
+            <div class="shot-grid g2 reveal d4">
+                <figure class="shot"><img src="assets/omni-replay-baseline-version.png" alt="" loading="lazy" onerror="this.parentElement.classList.add('missing')"><div class="ph"><span>截图待补</span><code>assets/omni-replay-baseline-version.png</code></div><figcaption><b>baseline</b> · <code>order_support-v1</code></figcaption></figure>
+                <figure class="shot"><img src="assets/omni-replay-c3-version.png" alt="" loading="lazy" onerror="this.parentElement.classList.add('missing')"><div class="ph"><span>截图待补</span><code>assets/omni-replay-c3-version.png</code></div><figcaption><b>候选</b> · 同位置变为 <code>c3-restructure-grounded</code></figcaption></figure>
+            </div>
+            <div class="code-card reveal d5">
+                <div class="code-head"><span class="code-dots"><i></i><i></i><i></i></span><b>每个 arm</b>&nbsp;MCP 调用</div>
+<pre class="code"><span class="k">manage_test_agent</span> {action:<span class="s">"set_start_command"</span>,
+  command:<span class="s">"OMNI_PROMPTS_OVERRIDE=c1/prompts.json
+    opentelemetry-instrument python agent.py"</span>}
+<span class="k">local_server</span> {action:<span class="s">"start"</span>}
+<span class="k">manage_test_agent</span> {action:<span class="s">"invoke_agent"</span>, prompt}
+<span class="k">search_local_telemetry</span> {operation:<span class="s">"get"</span>, traceIds}
+<span class="c">#   版本 / hash 不符 → 该格作废</span>
+<span class="k">manage_evaluations</span> {action:<span class="s">"run"</span>, evaluatorId,
+  targets:[{input, output, expected}]}</pre>
+            </div>
+        </div>
+        <p class="section-desc reveal d6 center" style="font-size:var(--small-size);">baseline 在这一步<b>重新跑</b>，不复用诊断阶段的数据；本地 SESSION 级 evaluator 所有调用共享一个 collector session，只有 1 个有效观测，不进门禁。</p>
+    </div>
+</section>
+
+<!-- ============ 13. GATE RESULTS ============ -->
+<section class="slide">
+    <div class="floating-orb orb-pink" style="width:26vw;height:26vw;top:10%;left:60%;animation:orbFloat1 16s ease-in-out infinite;"></div>
+    <div class="slide-content" style="gap:var(--content-gap);">
+        <div class="section-label reveal d1 center">Step 9 – 10 · 分阶段门禁</div>
+        <h2 class="section-title reveal d2 center">c1 一路走到 verify，<em>但「更好」还没被证明</em></h2>
+        <div class="table-wrap reveal d3">
+            <table class="themed">
+                <tr><th>阶段 · 数据</th><th>质量 Δ（95% CI）</th><th>最差单维</th><th>token</th><th>safety 新增</th><th>原登记门禁</th></tr>
+                <tr><td>S0 · control 28×3（判官第 1 次）</td><td>+0.023（−0.034, +0.083）</td><td>−0.024</td><td>+13.8%</td><td>0</td><td class="bad">NO_CHANGE</td></tr>
+                <tr><td>S0 · control（判官重评，替换）</td><td>+0.050（−0.009, +0.111）</td><td>+0.012</td><td>+13.8%</td><td>0</td><td class="bad">NO_CHANGE</td></tr>
+                <tr><td>S1 · holdout 7×3（重跑，替换）</td><td>+0.008（−0.035, +0.050）</td><td>−0.048</td><td>−3.5%</td><td>0</td><td class="bad">NO_CHANGE</td></tr>
+                <tr><td>S1 · verify 20 题（只跑一次）</td><td>+0.035（−0.045, +0.112）</td><td>−0.050</td><td>+30.2%</td><td>1（误报）</td><td class="bad">NO_CHANGE</td></tr>
+            </table>
+        </div>
+        <div class="stats-row reveal d4">
+            <div class="stat-item"><div class="stat-value">19/39 → 29/39</div><div class="stat-label">verify：回答里正确合计金额</div></div>
+            <div class="stat-item"><div class="stat-value">+0.167</div><div class="stat-label">verify：Correctness</div></div>
+            <div class="stat-item"><div class="stat-value">+30% · +4.7%</div><div class="stat-label">token · 延迟</div></div>
+        </div>
+        <p class="section-desc reveal d5 center" style="font-size:var(--small-size);">按 skill 原登记门禁，四次都是 NO_CHANGE；最终结局 <code>WINNER_UNDER_CALIBRATED_GATES</code> —— 来自下一页的三次人工校准，「真的更好」留给 S2 云上灰度（≥200 个真实 session）。</p>
+    </div>
+</section>
+
+<!-- ============ 14. CALIBRATION LOG ============ -->
+<section class="slide">
+    <div class="floating-orb orb-blue" style="width:24vw;height:24vw;bottom:8%;left:4%;animation:orbFloat2 16s ease-in-out infinite;"></div>
+    <div class="slide-content" style="gap:var(--content-gap);">
+        <div class="section-label reveal d1 center">decision.json · human_decisions</div>
+        <h2 class="section-title reveal d2 center">门禁可以调，<em>但每次调整都要留痕</em></h2>
+        <div class="table-wrap reveal d3">
+            <table class="themed">
+                <tr><th>时间（UTC）</th><th>类型</th><th>决定</th><th>看到结果后？</th></tr>
+                <tr><td>10-20 00:25</td><td>测量补充</td><td>control 336 格判官重评一次，第二次替换第一次（两次都报告）</td><td class="ok">否</td></tr>
+                <tr><td>10-20 02:06</td><td>门禁校准</td><td>CI 下界 ≥0 → ≥−0.01；token ≤10% → ≤15%</td><td class="warn">是</td></tr>
+                <tr><td>10-20 03:09</td><td>测量补充</td><td>holdout 7×3 重跑一遍，第二遍替换第一遍</td><td class="ok">否</td></tr>
+                <tr><td>10-20 03:30</td><td>门禁校准</td><td>改为非劣效：Δ ≥0、CI 下界 ≥−0.05、最差单维 ≥−0.05、token ≤15%</td><td class="warn">是</td></tr>
+                <tr><td>10-20 05:54</td><td>门禁校准</td><td>接受 verify token +30.2%（业务判断）与 1 个 safety 误报（frs_013）</td><td class="warn">是</td></tr>
+            </table>
+        </div>
+        <p class="section-desc reveal d4 center" style="font-size:var(--small-size);">教训：固定阈值不适合这个样本量。下一轮把门槛改成<b>由 A/A 计算、按阶段登记</b>（S0 非劣效筛选 → S1 没见过的题上不更差 → S2 真的更好 → S3 全量监控），越往后样本越多、门禁越严。</p>
+    </div>
+</section>
+
+<!-- ============ 15. WRITEBACK ============ -->
+<section class="slide">
+    <div class="floating-orb orb-purple" style="width:24vw;height:24vw;top:8%;right:5%;animation:orbFloat1 16s ease-in-out infinite;"></div>
+    <div class="slide-content" style="gap:clamp(0.4rem,1.2vw,1rem);">
+        <div class="section-label reveal d1 center">Step 11 · 决定与写回</div>
+        <h2 class="section-title reveal d2 center">只写本地，<em>可一键回滚</em></h2>
+        <div class="code-grid side">
+            <figure class="shot reveal d3"><img src="assets/omni-prompt-management.png" alt="" loading="lazy" style="height:clamp(140px,36vh,400px);object-fit:contain;" onerror="this.parentElement.classList.add('missing')"><div class="ph"><span>截图待补</span><code>assets/omni-prompt-management.png</code></div><figcaption><b>Prompt Management</b> · v2 = c1-add-concrete-amounts，带来源 run</figcaption></figure>
+            <div class="code-card reveal d4">
+                <div class="code-head"><span class="code-dots"><i></i><i></i><i></i></span><b>omni_steps.py decide</b></div>
+                <ul class="pit-list">
+                    <li><b>防篡改</b>：候选文件 hash 与 replay 时一致；其余层指纹与快照一致</li>
+                    <li><b>写回</b> <code>agent/prompts.json</code>：记录前后 sha256，生成备份与 <code>writeback/REVERT.sh</code></li>
+                    <li><b>不部署、不提交</b>：云上 v1 不变；上线走 CDK + S2 灰度</li>
+                    <li><b>下一阶段</b>：S2 ≥200 个真实 session，CI 下界 ≥0、safety 零新增</li>
+                </ul>
+            </div>
+        </div>
+        <figure class="shot reveal d5" style="max-width:min(94vw,1200px);margin:0 auto;width:100%;"><img src="assets/omni-prompt-diff.png" alt="" loading="lazy" style="height:clamp(50px,11vh,120px);object-fit:contain;background:#111;" onerror="this.parentElement.classList.add('missing')"><div class="ph"><span>截图待补</span><code>assets/omni-prompt-diff.png</code></div><figcaption><b>diff</b> · 只多了一句：可以退款时，必须写出每件商品的可退金额、原始运费是否退还及金额、退款合计（元）</figcaption></figure>
+    </div>
+</section>
+
+<!-- ============ 16. MCP CHEATSHEET ============ -->
+<section class="slide">
+    <div class="floating-orb orb-pink" style="width:22vw;height:22vw;bottom:8%;right:4%;animation:orbFloat3 17s ease-in-out infinite;"></div>
+    <div class="slide-content" style="gap:var(--content-gap);">
+        <div class="section-label reveal d1 center">Reference</div>
+        <h2 class="section-title reveal d2 center">本次用到的 <em>Omni MCP 工具</em></h2>
+        <div class="table-wrap reveal d3">
+            <table class="themed">
+                <tr><th>工具</th><th>步骤</th><th>做什么</th><th>实测要点</th></tr>
+                <tr><td><code>check_credentials</code></td><td>1</td><td>确认 Omni Space 与本机 AWS 账号</td><td>提示 "Cloud is not configured" → Kiro 没带 <code>AWS_REGION</code></td></tr>
+                <tr><td><code>discover_agent_traces_metadata</code> · <code>search_agent_traces</code></td><td>3</td><td>云端 trace 的列名与 SQL 查询</td><td>用 <code>attributes['session.id']</code>；时间用整数秒</td></tr>
+                <tr><td><code>manage_test_agent</code> · <code>local_server</code></td><td>1 · 6 · 8</td><td>设启动命令、起停 dev server、调用 agent</td><td>每个 arm 独立重启；<code>OMNI_PROMPTS_OVERRIDE</code> 指向候选</td></tr>
+                <tr><td><code>search_local_telemetry</code></td><td>1 · 8</td><td>按 trace ID 取本地 span</td><td>逐格核对 prompt 版本 / hash</td></tr>
+                <tr><td><code>manage_evaluations</code></td><td>4 · 6 · 8</td><td><code>get_evaluator</code> 读值域；<code>run</code> + targets 打分</td><td>targets 带 expected / assertions；SESSION 级不进门禁</td></tr>
+            </table>
+        </div>
+        <p class="section-desc reveal d4 center" style="font-size:var(--small-size);">调用入口：<code>node scripts/omni.mjs &lt;tool&gt; '&lt;json&gt;'</code>（自动读 <code>.omni/mcp-port</code> 与 <code>.omni/mcp-token</code>）· skill：<code>training/omni/skills/omni-self-evolution-v2/SKILL.md</code></p>
+    </div>
+</section>
+
+<!-- ============ 17. NEXT ROUND ============ -->
+<section class="slide">
+    <div class="floating-orb orb-blue" style="width:24vw;height:24vw;top:10%;left:62%;animation:orbFloat1 16s ease-in-out infinite;"></div>
+    <div class="slide-content" style="gap:var(--content-gap);">
+        <div class="section-label reveal d1 center">What we learned</div>
+        <h2 class="section-title reveal d2 center">修好一层，<em>常会暴露下一层</em></h2>
+        <div class="features-grid">
+            <div class="feature-card reveal d3"><div class="feat-icon"><i data-lucide="split"></i></div><h3>跨层副作用</h3><p>c1 要求「写出金额」，把模型心算券分摊、折旧费的错误直接暴露给用户 —— 诊断里 38% 的 Tool 层问题还在。</p></div>
+            <div class="feature-card reveal d4"><div class="feat-icon"><i data-lucide="wrench"></i></div><h3>下一轮改 Tool</h3><p>同样的方法在 CloudWatch 版上验证：<code>AGENT_TOOL_TIER=enhanced</code> 加 3 个确定性工具，确认集 40 题 Δ +0.162，CI [+0.083, +0.243]。</p></div>
+            <div class="feature-card reveal d5"><div class="feat-icon"><i data-lucide="notebook-pen"></i></div><h3>skill 也在演进</h3><p>这次运行留下 18 条 skill 修订：全层快照、A/A、事先登记、分阶段门禁、四组数据、测量与校准分开记录。</p></div>
+        </div>
+        <p class="section-desc reveal d6 center">单条修好 ≠ 全局更好 ≠ 可以发布：诊断回答「改哪里」，replay 回答「修好没有」，门禁回答「能不能发」，各用各的证据。</p>
+    </div>
+</section>
+
+<!-- ============ 18. CLOSING ============ -->
+<section class="slide title-slide">
+    <div class="blob-canvas">
+        <div class="blob" style="width:55vw;height:55vw;top:-10%;left:35%;animation:blob1 13s ease-in-out infinite;"></div>
+        <div class="blob" style="width:45vw;height:45vw;bottom:-10%;left:-8%;animation:blob3 17s ease-in-out infinite;"></div>
+    </div>
+    <div class="slide-content">
+        <div class="title-label reveal d1">Takeaways</div>
+        <h1 class="title-main reveal d2">先测准，<br><em>再改进</em></h1>
+        <div class="title-accent reveal d3"></div>
+        <p class="title-sub reveal d4">span 带版本 · 全层快照 · 生产评估先体检 · 切分是纯函数 · 重复采样 + A/A<br>门禁事先登记、分阶段收紧 · 每轮只改一层 · 只写本地、可回滚</p>
+        <p class="title-sub reveal d5" style="font-size:var(--small-size);opacity:0.75;">材料：training/omni（workflow · skill · scripts）· .omni/self-evolution/&lt;run&gt;（全部产物）</p>
+        <div class="reveal d6" style="display:flex;justify-content:center;margin-top:clamp(0.6rem,1.5vh,1.2rem);"><a class="repo-card" href="https://github.com/yagrxu/self-evolve-demo-with-omni" target="_blank" rel="noopener"><img src="assets/qr-github.svg" alt="GitHub QR"><span class="repo-text"><span class="repo-label">Demo · GitHub</span><code>github.com/yagrxu/self-evolve-demo-with-omni</code></span></a></div>
+    </div>
+</section>
+
+<script>
+/* ===========================================
+   SLIDE PRESENTATION CONTROLLER
+   Keyboard · wheel · touch · nav dots · progress · page number
+   =========================================== */
+class SlidePresentation {
+    constructor() {
+        this.slides = Array.from(document.querySelectorAll('.slide'));
+        this.current = 0;
+        this.locked = false;
+        this.dots = document.getElementById('navDots');
+        this.bar = document.getElementById('progressBar');
+        this.pageNum = document.getElementById('pageNumber');
+        this.setupNavDots();
+        this.setupObserver();
+        this.setupKeyboard();
+        this.setupWheel();
+        this.setupTouch();
+        this.update();
+    }
+    setupNavDots() {
+        this.slides.forEach((_, i) => {
+            const b = document.createElement('button');
+            b.setAttribute('aria-label', `第 ${i + 1} 页`);
+            b.addEventListener('click', () => this.go(i));
+            this.dots.appendChild(b);
+        });
+    }
+    setupObserver() {
+        const io = new IntersectionObserver(entries => {
+            entries.forEach(e => {
+                if (e.isIntersecting) {
+                    e.target.classList.add('visible');
+                    this.current = this.slides.indexOf(e.target);
+                    this.update();
+                }
+            });
+        }, { threshold: 0.55 });
+        this.slides.forEach(s => io.observe(s));
+    }
+    setupKeyboard() {
+        document.addEventListener('keydown', e => {
+            if (['ArrowDown', 'ArrowRight', 'PageDown', ' '].includes(e.key)) { e.preventDefault(); this.go(this.current + 1); }
+            if (['ArrowUp', 'ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); this.go(this.current - 1); }
+            if (e.key === 'Home') this.go(0);
+            if (e.key === 'End') this.go(this.slides.length - 1);
+        });
+    }
+    setupWheel() {
+        window.addEventListener('wheel', e => {
+            e.preventDefault();
+            if (this.locked || Math.abs(e.deltaY) < 20) return;
+            this.go(this.current + (e.deltaY > 0 ? 1 : -1));
+        }, { passive: false });
+    }
+    setupTouch() {
+        let y0 = null;
+        window.addEventListener('touchstart', e => { y0 = e.touches[0].clientY; }, { passive: true });
+        window.addEventListener('touchend', e => {
+            if (y0 === null) return;
+            const dy = y0 - e.changedTouches[0].clientY;
+            if (Math.abs(dy) > 50) this.go(this.current + (dy > 0 ? 1 : -1));
+            y0 = null;
+        });
+    }
+    go(i) {
+        if (i < 0 || i >= this.slides.length) return;
+        this.locked = true;
+        this.slides[i].scrollIntoView({ behavior: 'smooth' });
+        this.current = i;
+        this.update();
+        setTimeout(() => { this.locked = false; }, 700);
+    }
+    update() {
+        Array.from(this.dots.children).forEach((d, i) => d.classList.toggle('active', i === this.current));
+        this.bar.style.width = `${((this.current + 1) / this.slides.length) * 100}%`;
+        if (this.pageNum) this.pageNum.textContent = `${this.current + 1} / ${this.slides.length}`;
+    }
+}
+
+/* Speaker info injection */
+if (typeof SPEAKER !== 'undefined') {
+    const el = document.getElementById('speakerInfo');
+    if (el) el.textContent = `${SPEAKER.name}, ${SPEAKER.company} ${SPEAKER.title}`;
+}
+new SlidePresentation();
+
+/* Image lightbox：点击截图放大，Esc / 点击关闭 */
+(() => {
+    const lb = document.getElementById('lightbox'), big = lb.querySelector('img');
+    document.querySelectorAll('.shot img').forEach(img => img.addEventListener('click', e => {
+        e.stopPropagation(); big.src = img.src; lb.classList.add('open');
+    }));
+    lb.addEventListener('click', () => lb.classList.remove('open'));
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') lb.classList.remove('open'); });
+})();
+if (typeof lucide !== 'undefined') lucide.createIcons();
+</script>
+</body>
+</html>
